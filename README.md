@@ -76,3 +76,6 @@ int main()
     // ...
 }
 ```
+
+### Preview
+![Preview](https://i.imgur.com/3KEcgQp.png)
