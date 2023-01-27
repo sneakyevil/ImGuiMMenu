@@ -163,6 +163,12 @@ public:
 			AddNewItem(m_Item);
 		}
 
+		void SetDescription(std::string m_Description)
+		{
+			C_ImMMenuItem* m_Item = Get(GetCount() - 1);
+			m_Item->Description.Initialize(m_Description);
+		}
+
 		std::string GetSelectOfCountString()
 		{
 			return (std::to_string(m_Selected + 1) + " of " + std::to_string(GetSelectableCount()));
@@ -248,6 +254,7 @@ public:
 		ImU32 ItemSelected			= IM_COL32(160, 0, 0, 180);
 		ImU32 Separator				= IM_COL32(160, 0, 0, 255);
 		ImU32 Primary				= IM_COL32(140, 0, 0, 255);
+		ImU32 Description			= IM_COL32(0, 0, 0, 200);
 
 		ImU32 Header_Text			= IM_COL32(255, 255, 255, 255);
 		ImU32 Title_Text			= IM_COL32(255, 255, 255, 255);
@@ -266,10 +273,17 @@ public:
 
 		__inline void AddMultiColorText(ImFont* m_Font, float m_FontSize, ImVec2 m_Pos, C_ImMMenuTextMultiColor* m_Text)
 		{
+			ImVec2 m_InitialPos = m_Pos;
 			for (int t = 0; m_Text->Count > t; ++t)
 			{
 				Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_Text->String[t][0]);
 				m_Pos.x += m_Font->CalcTextSizeA(m_FontSize, FLT_MAX, 0.f, &m_Text->String[t][0]).x;
+
+				if (strchr(&m_Text->String[t][0], '\n'))
+				{
+					m_Pos.x = m_InitialPos.x;
+					m_Pos.y += m_FontSize;
+				}
 			}
 		}
 	};
@@ -589,6 +603,29 @@ public:
 				ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &Footer.Text.GetFullString()[0]);
 				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_TextSize.x, floorf((m_FooterHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &Footer.Text);
+			}
+
+			Draw.m_Pos.y += m_FooterHeight;
+		}
+
+		// Item Description
+		{
+			if (Item.m_Selected == -1 || Item.m_Selected >= Item.GetSelectableCount())
+				return;
+
+			C_ImMMenuItem* m_Item = Item.GetSelectableItem(Item.m_Selected);
+			if (m_Item && m_Item->Description.Count)
+			{
+				Draw.m_Pos.y += 5.f;
+
+				ImVec2 m_TextSize			= Font.CalcTextSize(Font.Primary, &m_Item->Description.GetFullString()[0]);
+				float m_DescriptionHeight	= floorf(m_TextSize.y * 0.85f) + 10.f;
+
+				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_DescriptionHeight), Color.Description);
+				Draw.Get()->AddLine(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, 0.f), Color.Primary, 3.f);
+
+				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, 8.f));
+				Draw.AddMultiColorText(Font.Primary, floorf(Font.Primary->FontSize * 0.85f), m_TextPos, &m_Item->Description);
 			}
 		}
 
