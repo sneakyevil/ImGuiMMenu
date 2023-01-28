@@ -83,6 +83,22 @@ public:
 		int m_Selected		= 0; // Current selected item
 		int m_Interacted	= -1; // If there was value change or pressed this value will be temporary set
 
+		void ResetSelection()
+		{
+			m_Index			= 0;
+			m_Selected		= 0;
+			m_Interacted	= -1;
+		}
+
+		__inline bool IsSelectedValid()
+		{
+			int m_Count = GetSelectableCount();
+			if (0 > m_Selected || m_Selected >= m_Count)
+				return false;
+
+			return true;
+		}
+
 		__inline bool IsAnyInteracted() { return (m_Interacted != -1); }
 		__inline C_ImMMenuItem* GetInteracted() 
 		{ 
@@ -94,7 +110,7 @@ public:
 
 		void UpdateSideInteraction(int m_Value)
 		{
-			if (m_Selected == -1 || m_Selected >= GetSelectableCount())
+			if (!IsSelectedValid())
 				return;
 
 			C_ImMMenuItem* m_Item = GetSelectableItem(m_Selected);
@@ -104,6 +120,9 @@ public:
 
 		void UpdateInteraction()
 		{
+			if (!IsSelectedValid())
+				return;
+
 			C_ImMMenuItem* m_Item = GetInteracted();
 			if (m_Item)
 				m_Item->Interaction();
@@ -139,10 +158,10 @@ public:
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		void AddCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items)
+		bool AddCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items)
 		{
 			C_ImMMenuItemCombo* m_Item = new C_ImMMenuItemCombo(m_Name, m_Value, m_Items);
-			AddNewItem(m_Item);
+			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		void AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
@@ -171,7 +190,8 @@ public:
 
 		std::string GetSelectOfCountString()
 		{
-			return (std::to_string(m_Selected + 1) + " of " + std::to_string(GetSelectableCount()));
+			int m_Count = GetSelectableCount();
+			return (std::to_string(std::min(m_Count, m_Selected + 1)) + " of " + std::to_string(m_Count));
 		}
 
 		void Update(int m_SelectionChange)
@@ -446,6 +466,7 @@ public:
 		}
 
 		// Items
+		if (Item.GetCount())
 		{
 			// Draw
 			for (int i = Item.m_Index; std::min(Item.GetCount(), Item.m_Index + Item.m_NumToShow) > i; ++i)
@@ -472,7 +493,7 @@ public:
 					continue;
 				}
 
-				bool m_Selected = (i == Item.GetSelectable(Item.m_Selected));
+				bool m_Selected = (Item.m_Selected >= 0 && i == Item.GetSelectable(Item.m_Selected));
 
 				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, floorf((m_FrameHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
@@ -609,10 +630,8 @@ public:
 		}
 
 		// Item Description
+		if (Item.IsSelectedValid())
 		{
-			if (Item.m_Selected == -1 || Item.m_Selected >= Item.GetSelectableCount())
-				return;
-
 			C_ImMMenuItem* m_Item = Item.GetSelectableItem(Item.m_Selected);
 			if (m_Item && m_Item->Description.Count)
 			{
