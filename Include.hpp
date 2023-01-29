@@ -167,22 +167,22 @@ public:
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		void AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
+		bool AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
 		{
 			C_ImMMenuItemComboCheckbox* m_Item = new C_ImMMenuItemComboCheckbox(m_Name, m_Value, m_Values, m_Items);
-			AddNewItem(m_Item);
+			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		void AddInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power = 1)
+		bool AddInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power = 1)
 		{
 			C_ImMMenuItemInteger* m_Item = new C_ImMMenuItemInteger(m_Name, m_Value, m_Min, m_Max, m_Power);
-			AddNewItem(m_Item);
+			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		void AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f")
+		bool AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f")
 		{
 			C_ImMMenuItemFloat* m_Item = new C_ImMMenuItemFloat(m_Name, m_Value, m_Min, m_Max, m_Power, m_PreviewFormat);
-			AddNewItem(m_Item);
+			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		void SetDescription(std::string m_Description)
