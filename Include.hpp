@@ -28,6 +28,9 @@ public:
 	{
 		float m_Height;
 		C_ImMMenuTextMultiColor Text;
+
+		void* m_Image = nullptr;
+		ImVec2 m_ImageSize;
 	};
 	Header_t Header;
 	__inline void SetHeaderText(std::string m_Text) { Header.Text.Initialize(m_Text); }
@@ -216,11 +219,16 @@ public:
 				}
 				else
 				{
-					int m_SelectedInList = GetSelectable(m_Selected);
-					if (m_Index > m_SelectedInList)
-						m_Index = std::max(m_Index - 1, 0);
-					else if (m_SelectedInList >= (m_Index + m_NumToShow))
-						m_Index = std::min(m_Index + 1, std::max(m_MaxIndex, 0));
+					while (1)
+					{
+						int m_SelectedInList = GetSelectable(m_Selected);
+						if (m_Index > m_SelectedInList)
+							m_Index = std::max(m_Index - 1, 0);
+						else if (m_SelectedInList >= (m_Index + m_NumToShow))
+							m_Index = std::min(m_Index + 1, std::max(m_MaxIndex, 0));
+						else
+							break;
+					}
 				}
 			}
 			else
@@ -441,6 +449,33 @@ public:
 		// Header
 		{
 			Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, Header.m_Height), Color.Header);
+
+			if (Header.m_Image)
+			{
+				float m_WidthDiff	= (Header.m_ImageSize.x - m_FrameWidth);
+				float m_HeightDiff	= (Header.m_ImageSize.y - Header.m_Height);
+
+				if (m_WidthDiff > 0.f || m_HeightDiff > 0.f) // Need rescale
+				{
+					if (m_WidthDiff > m_HeightDiff)
+					{
+						float m_HeightCalc = (Header.m_ImageSize.y / Header.m_ImageSize.x);
+
+						Header.m_ImageSize.x = m_FrameWidth;
+						Header.m_ImageSize.y = floorf(m_HeightCalc * m_FrameWidth);
+					}
+					else
+					{
+						float m_WidthCalc = (Header.m_ImageSize.x / Header.m_ImageSize.y);
+
+						Header.m_ImageSize.x = floorf(m_WidthCalc * Header.m_Height);
+						Header.m_ImageSize.y = Header.m_Height;
+					}
+				}
+
+				ImVec2 m_ImagePos(Draw.m_Pos + ImVec2(floorf(m_FrameWidth * 0.5f) - floorf(Header.m_ImageSize.x * 0.5f), floorf(Header.m_Height * 0.5f) - floorf(Header.m_ImageSize.y * 0.5f)));
+				Draw.Get()->AddImage(Header.m_Image, m_ImagePos, m_ImagePos + Header.m_ImageSize, ImVec2(0.f, 0.f), ImVec2(1.f, 1.f), IM_COL32(0, 0, 0, 100));
+			}
 
 			if (Header.Text.Count)
 			{
