@@ -18,8 +18,8 @@ class C_ImMMenuItem
 {
 public:
 	E_ImMMenuItemType Type;
-	C_ImMMenuTextMultiColor Name;
-	C_ImMMenuTextMultiColor Description;
+	std::string Name;
+	std::string Description;
 
 	virtual ~C_ImMMenuItem() { }
 	virtual void Interaction() { }
@@ -29,8 +29,11 @@ public:
 	C_ImMMenuItem(E_ImMMenuItemType m_Type, std::string m_Name)
 	{
 		Type = m_Type;
-		Name.Initialize(m_Name);
+		Name = m_Name;
 	}
+
+	C_ImMMenuTextMultiColor GetName() { return C_ImMMenuTextMultiColor(Name); }
+	C_ImMMenuTextMultiColor GetDescription() { return C_ImMMenuTextMultiColor(Description); }
 
 	bool IsSelectable()
 	{

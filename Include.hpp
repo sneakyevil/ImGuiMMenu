@@ -188,7 +188,7 @@ public:
 		void SetDescription(std::string m_Description)
 		{
 			C_ImMMenuItem* m_Item = Get(GetCount() - 1);
-			m_Item->Description.Initialize(m_Description);
+			m_Item->Description = m_Description;
 		}
 
 		std::string GetSelectOfCountString()
@@ -507,14 +507,15 @@ public:
 			for (int i = Item.m_Index; std::min(Item.GetCount(), Item.m_Index + Item.m_NumToShow) > i; ++i)
 			{
 				C_ImMMenuItem* m_Item = Item.Get(i);
+				C_ImMMenuTextMultiColor m_ItemName = m_Item->GetName();
 
-				ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_Item->Name.GetFullString()[0]);
+				ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_ItemName.GetFullString()[0]);
 				float m_FrameHeight = floorf(m_TextSize.y * 2.f);
 
 				// Pre Left-side Element
 				if (m_Item->Type == ImMMenuItemType_Separator)
 				{
-					ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_Item->Name.GetFullString()[0]);
+					ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_ItemName.GetFullString()[0]);
 					ImVec2 m_TextPos(Draw.m_Pos + ImVec2(floorf((m_FrameWidth * 0.5f) - (m_TextSize.x * 0.5f)), floorf((m_FrameHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
 					Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), Color.Item);
@@ -522,7 +523,7 @@ public:
 					ImVec2 m_UnderlinePos(Draw.m_Pos + ImVec2(floorf(m_FrameWidth * 0.5f), floorf((m_FrameHeight * 0.5f) + (m_TextSize.y * 0.75f))));
 					Draw.Get()->AddLine(m_UnderlinePos - ImVec2(floorf(m_TextSize.x * 0.75f), 0.f), m_UnderlinePos + ImVec2(floorf(m_TextSize.x * 0.75f), 0.f), Color.Separator, 2.f);
 
-					Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_Item->Name);
+					Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_ItemName);
 
 					Draw.m_Pos.y += m_FrameHeight;
 					continue;
@@ -533,7 +534,7 @@ public:
 				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, floorf((m_FrameHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
 				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), (m_Selected ? Color.ItemSelected : Color.Item));
-				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_Item->Name);
+				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_ItemName);
 
 				// Right-side Element
 				switch (m_Item->Type)
@@ -668,18 +669,20 @@ public:
 		if (Item.IsSelectedValid())
 		{
 			C_ImMMenuItem* m_Item = Item.GetSelectableItem(Item.m_Selected);
-			if (m_Item && m_Item->Description.Count)
+			if (m_Item && !m_Item->Description.empty())
 			{
+				C_ImMMenuTextMultiColor m_ItemDescription = m_Item->GetDescription();
+
 				Draw.m_Pos.y += 5.f;
 
-				ImVec2 m_TextSize			= Font.CalcTextSize(Font.Primary, &m_Item->Description.GetFullString()[0]);
+				ImVec2 m_TextSize			= Font.CalcTextSize(Font.Primary, &m_ItemDescription.GetFullString()[0]);
 				float m_DescriptionHeight	= floorf(m_TextSize.y * 0.85f) + 10.f;
 
 				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_DescriptionHeight), Color.Description);
 				Draw.Get()->AddLine(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, 0.f), Color.Primary, 3.f);
 
 				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, 8.f));
-				Draw.AddMultiColorText(Font.Primary, floorf(Font.Primary->FontSize * 0.85f), m_TextPos, &m_Item->Description);
+				Draw.AddMultiColorText(Font.Primary, floorf(Font.Primary->FontSize * 0.85f), m_TextPos, &m_ItemDescription);
 			}
 		}
 
