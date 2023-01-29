@@ -564,9 +564,9 @@ public:
 					case ImMMenuItemType_Combo:
 					case ImMMenuItemType_ComboCheckbox:
 					{
-						C_ImMMenuTextMultiColor* m_PreviewText = reinterpret_cast<C_ImMMenuItemCombo*>(m_Item)->GetPreview();
+						C_ImMMenuTextMultiColor m_PreviewText = reinterpret_cast<C_ImMMenuItemCombo*>(m_Item)->GetPreview();
 
-						ImVec2 m_PreviewSize = Font.CalcTextSize(Font.Primary, &m_PreviewText->GetFullString()[0]);
+						ImVec2 m_PreviewSize = Font.CalcTextSize(Font.Primary, &m_PreviewText.GetFullString()[0]);
 						ImVec2 m_PreviewPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_PreviewSize.x, floorf((m_FrameHeight * 0.5f) - (m_PreviewSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
 						if (m_Selected)
@@ -599,7 +599,7 @@ public:
 							Draw.Get()->AddText(Icons.Font, Icons.Font->FontSize, m_IconLeftPos, Color.Primary_Text, Icons.LeftArrow);
 						}
 
-						Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_PreviewPos, m_PreviewText);
+						Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_PreviewPos, &m_PreviewText);
 					}
 					break;
 					case ImMMenuItemType_Integer:

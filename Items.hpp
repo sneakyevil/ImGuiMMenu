@@ -83,7 +83,7 @@ class C_ImMMenuItemCombo : public C_ImMMenuItem
 {
 public:
 	int* Value;
-	std::vector<C_ImMMenuTextMultiColor> Items;
+	std::vector<std::string> Items;
 
 	virtual bool SideInteraction(int m_Value)
 	{
@@ -101,14 +101,12 @@ public:
 	C_ImMMenuItemCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items)
 		: C_ImMMenuItem(ImMMenuItemType_Combo, m_Name)
 	{
-		Value = m_Value;
-		*Value = std::max(0, std::min(*Value, static_cast<int>(m_Items.size())));
-
-		for (std::string& m_Item : m_Items)
-			Items.emplace_back(m_Item);
+		Value	= m_Value;
+		*Value	= std::max(0, std::min(*Value, static_cast<int>(m_Items.size())));
+		Items	= m_Items;
 	}
 
-	C_ImMMenuTextMultiColor* GetPreview() { return &Items[*Value]; }
+	C_ImMMenuTextMultiColor GetPreview() { return C_ImMMenuTextMultiColor(Items[*Value]); }
 };
 
 class C_ImMMenuItemComboCheckbox : public C_ImMMenuItemCombo
