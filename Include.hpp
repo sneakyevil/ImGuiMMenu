@@ -113,9 +113,6 @@ public:
 
 		void UpdateSideInteraction(int m_Value)
 		{
-			if (!IsSelectedValid())
-				return;
-
 			C_ImMMenuItem* m_Item = GetSelectableItem(m_Selected);
 			if (m_Item)
 				m_Item->SideInteraction(m_Value);
@@ -123,9 +120,6 @@ public:
 
 		void UpdateInteraction()
 		{
-			if (!IsSelectedValid())
-				return;
-
 			C_ImMMenuItem* m_Item = GetInteracted();
 			if (m_Item)
 				m_Item->Interaction();
@@ -182,6 +176,19 @@ public:
 		bool AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f")
 		{
 			C_ImMMenuItemFloat* m_Item = new C_ImMMenuItemFloat(m_Name, m_Value, m_Min, m_Max, m_Power, m_PreviewFormat);
+			return (m_Interacted == AddNewItem(m_Item));
+		}
+
+		bool AddKeybind(std::string m_Name, ImGuiKey* m_Value)
+		{
+			C_ImMMenuItemKeybind* m_Item = new C_ImMMenuItemKeybind(m_Name, m_Value);
+			return (m_Interacted == AddNewItem(m_Item));
+		}
+
+		std::string m_TextInputBuffer;
+		bool AddTextInput(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags = 0)
+		{
+			C_ImMMenuItemInputText* m_Item = new C_ImMMenuItemInputText(m_Name, m_PopupText, m_Buffer, m_BufferSize, m_Flags);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
@@ -344,8 +351,25 @@ public:
 
 		ImGuiKey m_InteractionKey = ImGuiKey_Enter;
 
+		bool IsInteractingWithKeybind	= false;
+		bool IsInteractingWithInputText = false;
+		bool BlockedByItem()
+		{
+			return (IsInteractingWithKeybind || IsInteractingWithInputText);
+		}
+
 		void Update(double m_CurrentTime)
 		{
+			if (BlockedByItem())
+			{
+				for (int i = 0; 4 > i; ++i)
+				{
+					m_NagivationEmulatedPressCount[i] = 1;
+					m_NavigationLastPress[i] = m_CurrentTime + m_NavigationRepeatDelta;
+				}
+				return;
+			}
+
 			for (int i = 0; 4 > i; ++i)
 			{
 				if (!ImGui::IsKeyDown(m_NavigationKeys[i]))
@@ -374,6 +398,18 @@ public:
 
 			if (ImGui::IsKeyPressed(m_InteractionKey, false))
 				SelectInteraction();
+		}
+
+		ImGuiKey GetAnyPressed()
+		{
+			for (int i = ImGuiKey_NamedKey_BEGIN; ImGuiKey_NamedKey_END > i; ++i)
+			{
+				ImGuiKey m_Key = static_cast<ImGuiKey>(i);
+				if (ImGui::IsKeyPressed(m_Key, false))
+					return m_Key;
+			}
+
+			return ImGuiKey_None;
 		}
 	};
 	Input_t Input;
@@ -423,6 +459,30 @@ public:
 	void End()
 	{
 		// Input
+		if (Input.IsInteractingWithKeybind)
+		{
+			ImGuiKey m_PressedKey = Input.GetAnyPressed();
+			if (m_PressedKey != ImGuiKey_None)
+			{
+				C_ImMMenuItemKeybind* m_InteractedItem = reinterpret_cast<C_ImMMenuItemKeybind*>(Item.GetInteracted());
+				*m_InteractedItem->Value = (m_PressedKey == ImGuiKey_Escape ? ImGuiKey_None : m_PressedKey);
+
+				Input.IsInteractingWithKeybind = false;
+			}
+		}
+		else if (Input.IsInteractingWithInputText)
+		{
+			if (ImGui::IsKeyPressed(Input.m_InteractionKey, false))
+			{
+				C_ImMMenuItemInputText* m_InputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
+				memcpy(m_InputText->Buffer, &Item.m_TextInputBuffer[0], m_InputText->BufferSize);
+				Item.m_TextInputBuffer.clear();
+				Input.IsInteractingWithInputText = false;
+			}
+			else if (ImGui::IsKeyPressed(ImGuiKey_Escape, false))
+				Input.IsInteractingWithInputText = false;
+		}
+		else if (!Input.BlockedByItem())
 		{
 			if (Input.m_SelectUpDown != 0)
 			{
@@ -432,14 +492,29 @@ public:
 
 			if (Input.m_SelectLeftRight != 0)
 			{
-				Item.UpdateSideInteraction(static_cast<int>(Input.m_SelectLeftRight));
+				if (Item.IsSelectedValid())
+					Item.UpdateSideInteraction(static_cast<int>(Input.m_SelectLeftRight));
 				Input.m_SelectLeftRight = 0;
 			}
 
 			if (Input.m_SelectInteraction)
 			{
-				Item.m_Interacted = Item.m_Selected;
-				Item.UpdateInteraction();
+				if (Item.IsSelectedValid())
+				{
+					Item.m_Interacted = Item.m_Selected;
+					Item.UpdateInteraction();
+
+					C_ImMMenuItem* m_InteractedItem = Item.GetInteracted();
+					if (m_InteractedItem->Type == ImMMenuItemType_Keybind)
+						Input.IsInteractingWithKeybind = true;
+					else if (m_InteractedItem->Type == ImMMenuItemType_InputText)
+					{
+						Item.m_Interacted = -1;
+						Item.m_TextInputBuffer = reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->Buffer;
+						Item.m_TextInputBuffer.resize(reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->BufferSize);
+						Input.IsInteractingWithInputText = true;
+					}
+				}
 				Input.m_SelectInteraction = false;
 			}
 			else
@@ -451,31 +526,7 @@ public:
 			Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, Header.m_Height), Color.Header);
 
 			if (Header.m_Image)
-			{
-				float m_WidthDiff	= (Header.m_ImageSize.x - m_FrameWidth);
-				float m_HeightDiff	= (Header.m_ImageSize.y - Header.m_Height);
-
-				if (m_WidthDiff > 0.f || m_HeightDiff > 0.f) // Need rescale
-				{
-					if (m_WidthDiff > m_HeightDiff)
-					{
-						float m_HeightCalc = (Header.m_ImageSize.y / Header.m_ImageSize.x);
-
-						Header.m_ImageSize.x = m_FrameWidth;
-						Header.m_ImageSize.y = floorf(m_HeightCalc * m_FrameWidth);
-					}
-					else
-					{
-						float m_WidthCalc = (Header.m_ImageSize.x / Header.m_ImageSize.y);
-
-						Header.m_ImageSize.x = floorf(m_WidthCalc * Header.m_Height);
-						Header.m_ImageSize.y = Header.m_Height;
-					}
-				}
-
-				ImVec2 m_ImagePos(Draw.m_Pos + ImVec2(floorf(m_FrameWidth * 0.5f) - floorf(Header.m_ImageSize.x * 0.5f), floorf(Header.m_Height * 0.5f) - floorf(Header.m_ImageSize.y * 0.5f)));
-				Draw.Get()->AddImage(Header.m_Image, m_ImagePos, m_ImagePos + Header.m_ImageSize, ImVec2(0.f, 0.f), ImVec2(1.f, 1.f), IM_COL32(0, 0, 0, 100));
-			}
+				Draw.Get()->AddImage(Header.m_Image, Draw.m_Pos, Draw.m_Pos + Header.m_ImageSize);
 
 			if (Header.Text.Count)
 			{
@@ -521,7 +572,7 @@ public:
 					Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), Color.Item);
 
 					ImVec2 m_UnderlinePos(Draw.m_Pos + ImVec2(floorf(m_FrameWidth * 0.5f), floorf((m_FrameHeight * 0.5f) + (m_TextSize.y * 0.75f))));
-					Draw.Get()->AddLine(m_UnderlinePos - ImVec2(floorf(m_TextSize.x * 0.75f), 0.f), m_UnderlinePos + ImVec2(floorf(m_TextSize.x * 0.75f), 0.f), Color.Separator, 2.f);
+					Draw.Get()->AddLine(m_UnderlinePos - ImVec2(floorf(m_TextSize.x * 0.5f) + 10.f, 0.f), m_UnderlinePos + ImVec2(floorf(m_TextSize.x * 0.5f) + 10.f, 0.f), Color.Separator, 2.f);
 
 					Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_ItemName);
 
@@ -628,6 +679,44 @@ public:
 						Draw.Get()->AddText(Font.Primary, Font.Primary->FontSize, m_PreviewPos, Color.Primary_Text, &m_PreviewText[0]);
 					}
 					break;
+					case ImMMenuItemType_Keybind:
+					{
+						ImGuiKey m_Key = reinterpret_cast<C_ImMMenuItemKeybind*>(m_Item)->GetKey();
+
+						std::string m_KeyText = "< ";
+						if (Item.GetInteracted() == m_Item)
+							m_KeyText += "Press Key";
+						else if (m_Key == ImGuiKey_None)
+							m_KeyText += "None";
+						else
+							m_KeyText += ImGui::GetKeyName(m_Key);
+
+						m_KeyText += " >";
+
+						ImVec2 m_KeySize = Font.CalcTextSize(Font.Primary, &m_KeyText[0]);
+						ImVec2 m_KeyPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_KeySize.x, floorf((m_FrameHeight * 0.5f) - (m_KeySize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+
+						Draw.Get()->AddText(Font.Primary, Font.Primary->FontSize, m_KeyPos, Color.Primary_Text, &m_KeyText[0]);
+					}
+					break;
+					case ImMMenuItemType_InputText:
+					{
+						std::string m_TextValue = reinterpret_cast<C_ImMMenuItemInputText*>(m_Item)->Buffer;
+						if (m_TextValue.empty())
+							break;
+
+						if (m_TextValue.size() > 16)
+						{
+							m_TextValue.erase(16, m_TextValue.size() - 16);
+							m_TextValue += "...";
+						}
+
+						ImVec2 m_TextValueSize = Font.CalcTextSize(Font.Primary, &m_TextValue[0]);
+						ImVec2 m_TextValuePos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_TextValueSize.x, floorf((m_FrameHeight * 0.5f) - (m_TextValueSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+
+						Draw.Get()->AddText(Font.Primary, Font.Primary->FontSize, m_TextValuePos, Color.Primary_Text, &m_TextValue[0]);
+					}
+					break;
 				}
 
 				Draw.m_Pos.y += m_FrameHeight;
@@ -665,9 +754,9 @@ public:
 			Draw.m_Pos.y += m_FooterHeight;
 		}
 
-		// Item Description
 		if (Item.IsSelectedValid())
 		{
+			// Item Description
 			C_ImMMenuItem* m_Item = Item.GetSelectableItem(Item.m_Selected);
 			if (m_Item && !m_Item->Description.empty())
 			{
@@ -683,6 +772,43 @@ public:
 
 				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, 8.f));
 				Draw.AddMultiColorText(Font.Primary, floorf(Font.Primary->FontSize * 0.85f), m_TextPos, &m_ItemDescription);
+
+				Draw.m_Pos.y += m_DescriptionHeight;
+			}
+
+			// InputText Popup
+			if (Input.IsInteractingWithInputText)
+			{
+				C_ImMMenuItemInputText* m_InputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
+
+				Draw.m_Pos.y += 5.f;
+				ImVec2 m_PopupSize(m_FrameWidth, floorf(Font.Primary->FontSize * 3.f) + 30.f);
+
+				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + m_PopupSize, Color.Item);
+
+				C_ImMMenuTextMultiColor m_PopupText = m_InputText->GetPopupText();
+				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, Draw.m_Pos + ImVec2(10.f, 10.f), &m_PopupText);
+
+				ImRect m_InputFieldBB(Draw.m_Pos + ImVec2(10.f, Font.Primary->FontSize + 15.f), Draw.m_Pos + m_PopupSize - ImVec2(10.f, 10.f));
+				Draw.Get()->AddRectFilled(m_InputFieldBB.Min, m_InputFieldBB.Max, IM_COL32(0, 0, 0, 255));
+				Draw.Get()->AddRect(m_InputFieldBB.Min, m_InputFieldBB.Max, IM_COL32(50, 50, 50, 255), 0.f, 0, 2.f);
+
+				ImGui::SetNextWindowPos(m_InputFieldBB.Min + ImVec2(5.f, 6.f));
+				ImGui::SetNextWindowSize(m_InputFieldBB.Max - m_InputFieldBB.Min);
+
+				ImGui::PushFont(Font.Primary);
+				ImGui::PushStyleColor(ImGuiCol_TextSelectedBg, Color.Primary);
+				ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4());
+				if (ImGui::Begin("###InputPopup", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground))
+				{
+					ImGui::SetCursorPos(ImVec2(0.f, 0.f));
+					ImGui::SetKeyboardFocusHere();
+					ImGui::SetNextItemWidth(m_InputFieldBB.Max.x - m_InputFieldBB.Min.x - 10.f);
+					ImGui::InputText("###InputText", &Item.m_TextInputBuffer[0], m_InputText->BufferSize, m_InputText->Flags);
+					ImGui::End();
+				}
+				ImGui::PopStyleColor(2);
+				ImGui::PopFont();
 			}
 		}
 

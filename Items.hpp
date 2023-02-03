@@ -12,6 +12,8 @@ enum E_ImMMenuItemType : int
 	ImMMenuItemType_ComboCheckbox,
 	ImMMenuItemType_Integer,
 	ImMMenuItemType_Float,
+	ImMMenuItemType_Keybind,
+	ImMMenuItemType_InputText,
 };
 
 class C_ImMMenuItem
@@ -202,4 +204,38 @@ public:
 
 		return m_Preview;
 	}
+};
+
+class C_ImMMenuItemKeybind : public C_ImMMenuItem
+{
+public:
+	ImGuiKey* Value;
+
+	C_ImMMenuItemKeybind(std::string m_Name, ImGuiKey* m_Value)
+		: C_ImMMenuItem(ImMMenuItemType_Keybind, m_Name)
+	{
+		Value = m_Value;
+	}
+
+	__inline ImGuiKey GetKey() { return *Value; }
+};
+
+class C_ImMMenuItemInputText : public C_ImMMenuItem
+{
+public:
+	std::string PopupText;
+	char* Buffer;
+	size_t BufferSize;
+	ImGuiInputTextFlags Flags;
+
+	C_ImMMenuItemInputText(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags)
+		: C_ImMMenuItem(ImMMenuItemType_InputText, m_Name)
+	{
+		PopupText	= m_PopupText;
+		Buffer		= m_Buffer;
+		BufferSize	= m_BufferSize;
+		Flags		= m_Flags;
+	}
+
+	C_ImMMenuTextMultiColor GetPopupText() { return C_ImMMenuTextMultiColor(PopupText); }
 };
