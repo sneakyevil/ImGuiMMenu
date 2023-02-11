@@ -63,16 +63,36 @@ public:
 		void CleanUp()
 		{
 			for (int i = 0; GetCount() > i; ++i)
-				delete Get(i);
+			{
+				C_ImMMenuItem* m_Item = Get(i);
+				if (m_Item)
+					delete m_Item;
+			}
 
 			m_List.clear();
 			m_SelectableList.clear();
 		}
 
+
+		__inline bool IsSelectable(E_ImMMenuItemType m_Type)
+		{
+			if (m_Type == ImMMenuItemType_Unknown || m_Type == ImMMenuItemType_Separator || m_Type == ImMMenuItemType_TextUnselectable)
+				return false;
+
+			return true;
+		}
+
+		void AddDummy(E_ImMMenuItemType m_Type)
+		{
+			m_List.emplace_back(nullptr);
+			if (IsSelectable(m_Type))
+				m_SelectableList.emplace_back(GetCount() - 1);
+		}
+
 		int AddNewItem(C_ImMMenuItem* m_Item)
 		{
 			m_List.emplace_back(m_Item);
-			if (m_Item->IsSelectable())
+			if (IsSelectable(m_Item->Type))
 			{
 				m_SelectableList.emplace_back(GetCount() - 1);
 				return (GetSelectableCount() - 1);
@@ -125,77 +145,121 @@ public:
 				m_Item->Interaction();
 		}
 
+		bool IsDummy(E_ImMMenuItemType m_Type)
+		{
+			int m_Count = GetCount();
+			if (m_Count >= m_Index && (m_Index + m_NumToShow) > m_Count)
+				return false;
+
+			AddDummy(m_Type);
+			return true;
+		}
+
 		void AddSeparator(std::string m_Name)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return;
+
 			C_ImMMenuItemSeparator* m_Item = new C_ImMMenuItemSeparator(m_Name);
 			AddNewItem(m_Item);
 		}
 
 		bool AddText(std::string m_Name)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItem* m_Item = new C_ImMMenuItem(ImMMenuItemType_Text, m_Name);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		void AddTextUnselectable(std::string m_Name)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return;
+
 			C_ImMMenuItem* m_Item = new C_ImMMenuItem(ImMMenuItemType_TextUnselectable, m_Name);
 			AddNewItem(m_Item);
 		}
 
 		bool AddSection(std::string m_Name)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItem* m_Item = new C_ImMMenuItem(ImMMenuItemType_Section, m_Name);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		bool AddCheckbox(std::string m_Name, bool* m_Value)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItemCheckbox* m_Item = new C_ImMMenuItemCheckbox(m_Name, m_Value);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		bool AddCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItemCombo* m_Item = new C_ImMMenuItemCombo(m_Name, m_Value, m_Items);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		bool AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItemComboCheckbox* m_Item = new C_ImMMenuItemComboCheckbox(m_Name, m_Value, m_Values, m_Items);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		bool AddInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power = 1)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItemInteger* m_Item = new C_ImMMenuItemInteger(m_Name, m_Value, m_Min, m_Max, m_Power);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		bool AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f")
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItemFloat* m_Item = new C_ImMMenuItemFloat(m_Name, m_Value, m_Min, m_Max, m_Power, m_PreviewFormat);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		bool AddKeybind(std::string m_Name, ImGuiKey* m_Value)
 		{
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
 			C_ImMMenuItemKeybind* m_Item = new C_ImMMenuItemKeybind(m_Name, m_Value);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		std::string m_TextInputBuffer;
-		bool AddTextInput(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags = 0)
+		bool AddTextInput(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags = 0, bool m_HideBuffer = false)
 		{
-			C_ImMMenuItemInputText* m_Item = new C_ImMMenuItemInputText(m_Name, m_PopupText, m_Buffer, m_BufferSize, m_Flags);
+			if (IsDummy(ImMMenuItemType_Text))
+				return false;
+
+			C_ImMMenuItemInputText* m_Item = new C_ImMMenuItemInputText(m_Name, m_PopupText, m_Buffer, m_BufferSize, m_Flags, m_HideBuffer);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
 		void SetDescription(std::string m_Description)
 		{
 			C_ImMMenuItem* m_Item = Get(GetCount() - 1);
-			m_Item->Description = m_Description;
+			if (m_Item)
+				m_Item->Description = m_Description;
 		}
 
 		std::string GetSelectOfCountString()
@@ -458,69 +522,6 @@ public:
 
 	void End()
 	{
-		// Input
-		if (Input.IsInteractingWithKeybind)
-		{
-			ImGuiKey m_PressedKey = Input.GetAnyPressed();
-			if (m_PressedKey != ImGuiKey_None)
-			{
-				C_ImMMenuItemKeybind* m_InteractedItem = reinterpret_cast<C_ImMMenuItemKeybind*>(Item.GetInteracted());
-				*m_InteractedItem->Value = (m_PressedKey == ImGuiKey_Escape ? ImGuiKey_None : m_PressedKey);
-
-				Input.IsInteractingWithKeybind = false;
-			}
-		}
-		else if (Input.IsInteractingWithInputText)
-		{
-			if (ImGui::IsKeyPressed(Input.m_InteractionKey, false))
-			{
-				C_ImMMenuItemInputText* m_InputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
-				memcpy(m_InputText->Buffer, &Item.m_TextInputBuffer[0], m_InputText->BufferSize);
-				Item.m_TextInputBuffer.clear();
-				Input.IsInteractingWithInputText = false;
-			}
-			else if (ImGui::IsKeyPressed(ImGuiKey_Escape, false))
-				Input.IsInteractingWithInputText = false;
-		}
-		else if (!Input.BlockedByItem())
-		{
-			if (Input.m_SelectUpDown != 0)
-			{
-				Item.Update(static_cast<int>(Input.m_SelectUpDown));
-				Input.m_SelectUpDown = 0;
-			}
-
-			if (Input.m_SelectLeftRight != 0)
-			{
-				if (Item.IsSelectedValid())
-					Item.UpdateSideInteraction(static_cast<int>(Input.m_SelectLeftRight));
-				Input.m_SelectLeftRight = 0;
-			}
-
-			if (Input.m_SelectInteraction)
-			{
-				if (Item.IsSelectedValid())
-				{
-					Item.m_Interacted = Item.m_Selected;
-					Item.UpdateInteraction();
-
-					C_ImMMenuItem* m_InteractedItem = Item.GetInteracted();
-					if (m_InteractedItem->Type == ImMMenuItemType_Keybind)
-						Input.IsInteractingWithKeybind = true;
-					else if (m_InteractedItem->Type == ImMMenuItemType_InputText)
-					{
-						Item.m_Interacted = -1;
-						Item.m_TextInputBuffer = reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->Buffer;
-						Item.m_TextInputBuffer.resize(reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->BufferSize);
-						Input.IsInteractingWithInputText = true;
-					}
-				}
-				Input.m_SelectInteraction = false;
-			}
-			else
-				Item.m_Interacted = -1;
-		}
-
 		// Header
 		{
 			Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, Header.m_Height), Color.Header);
@@ -701,6 +702,9 @@ public:
 					break;
 					case ImMMenuItemType_InputText:
 					{
+						if (reinterpret_cast<C_ImMMenuItemInputText*>(m_Item)->HideBuffer)
+							break;
+
 						std::string m_TextValue = reinterpret_cast<C_ImMMenuItemInputText*>(m_Item)->Buffer;
 						if (m_TextValue.empty())
 							break;
@@ -799,6 +803,7 @@ public:
 				ImGui::PushFont(Font.Primary);
 				ImGui::PushStyleColor(ImGuiCol_TextSelectedBg, Color.Primary);
 				ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4());
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
 				if (ImGui::Begin("###InputPopup", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground))
 				{
 					ImGui::SetCursorPos(ImVec2(0.f, 0.f));
@@ -807,9 +812,73 @@ public:
 					ImGui::InputText("###InputText", &Item.m_TextInputBuffer[0], m_InputText->BufferSize, m_InputText->Flags);
 					ImGui::End();
 				}
+				ImGui::PopStyleVar(1);
 				ImGui::PopStyleColor(2);
 				ImGui::PopFont();
 			}
+		}
+
+		// Input
+		if (Input.IsInteractingWithKeybind)
+		{
+			ImGuiKey m_PressedKey = Input.GetAnyPressed();
+			if (m_PressedKey != ImGuiKey_None)
+			{
+				C_ImMMenuItemKeybind* m_InteractedItem = reinterpret_cast<C_ImMMenuItemKeybind*>(Item.GetInteracted());
+				*m_InteractedItem->Value = (m_PressedKey == ImGuiKey_Escape ? ImGuiKey_None : m_PressedKey);
+
+				Input.IsInteractingWithKeybind = false;
+			}
+		}
+		else if (Input.IsInteractingWithInputText)
+		{
+			if (ImGui::IsKeyPressed(Input.m_InteractionKey, false))
+			{
+				C_ImMMenuItemInputText* m_InputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
+				memcpy(m_InputText->Buffer, &Item.m_TextInputBuffer[0], m_InputText->BufferSize);
+				Item.m_TextInputBuffer.clear();
+				Input.IsInteractingWithInputText = false;
+			}
+			else if (ImGui::IsKeyPressed(ImGuiKey_Escape, false))
+				Input.IsInteractingWithInputText = false;
+		}
+		else if (!Input.BlockedByItem())
+		{
+			if (Input.m_SelectUpDown != 0)
+			{
+				Item.Update(static_cast<int>(Input.m_SelectUpDown));
+				Input.m_SelectUpDown = 0;
+			}
+
+			if (Input.m_SelectLeftRight != 0)
+			{
+				if (Item.IsSelectedValid())
+					Item.UpdateSideInteraction(static_cast<int>(Input.m_SelectLeftRight));
+				Input.m_SelectLeftRight = 0;
+			}
+
+			if (Input.m_SelectInteraction)
+			{
+				if (Item.IsSelectedValid())
+				{
+					Item.m_Interacted = Item.m_Selected;
+					Item.UpdateInteraction();
+
+					C_ImMMenuItem* m_InteractedItem = Item.GetInteracted();
+					if (m_InteractedItem->Type == ImMMenuItemType_Keybind)
+						Input.IsInteractingWithKeybind = true;
+					else if (m_InteractedItem->Type == ImMMenuItemType_InputText)
+					{
+						Item.m_Interacted = -1;
+						Item.m_TextInputBuffer = reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->Buffer;
+						Item.m_TextInputBuffer.resize(reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->BufferSize);
+						Input.IsInteractingWithInputText = true;
+					}
+				}
+				Input.m_SelectInteraction = false;
+			}
+			else
+				Item.m_Interacted = -1;
 		}
 
 		Item.CleanUp();

@@ -19,7 +19,7 @@ enum E_ImMMenuItemType : int
 class C_ImMMenuItem
 {
 public:
-	E_ImMMenuItemType Type;
+	E_ImMMenuItemType Type = ImMMenuItemType_Unknown;
 	std::string Name;
 	std::string Description;
 
@@ -28,32 +28,11 @@ public:
 	virtual bool SideInteraction(int m_Value) { return false; }
 
 	C_ImMMenuItem() { }
-	C_ImMMenuItem(E_ImMMenuItemType m_Type, std::string m_Name)
-	{
-		Type = m_Type;
-		Name = m_Name;
-	}
+	C_ImMMenuItem(E_ImMMenuItemType m_Type) { Type = m_Type; }
+	C_ImMMenuItem(E_ImMMenuItemType m_Type, std::string m_Name) { Type = m_Type; Name = m_Name; }
 
 	C_ImMMenuTextMultiColor GetName() { return C_ImMMenuTextMultiColor(Name); }
 	C_ImMMenuTextMultiColor GetDescription() { return C_ImMMenuTextMultiColor(Description); }
-
-	bool IsSelectable()
-	{
-		if (Type == ImMMenuItemType_Unknown || Type == ImMMenuItemType_Separator ||
-			Type == ImMMenuItemType_TextUnselectable)
-			return false;
-
-		return true;
-	}
-
-	bool HasLeftRightOption()
-	{
-		if (Type == ImMMenuItemType_Combo || Type == ImMMenuItemType_ComboCheckbox ||
-			Type == ImMMenuItemType_Integer || Type == ImMMenuItemType_Float)
-			return true;
-
-		return false;
-	}
 };
 
 class C_ImMMenuItemSeparator : public C_ImMMenuItem
@@ -227,14 +206,16 @@ public:
 	char* Buffer;
 	size_t BufferSize;
 	ImGuiInputTextFlags Flags;
+	bool HideBuffer;
 
-	C_ImMMenuItemInputText(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags)
+	C_ImMMenuItemInputText(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags, bool m_HideBuffer)
 		: C_ImMMenuItem(ImMMenuItemType_InputText, m_Name)
 	{
 		PopupText	= m_PopupText;
 		Buffer		= m_Buffer;
 		BufferSize	= m_BufferSize;
 		Flags		= m_Flags;
+		HideBuffer 	= m_HideBuffer;
 	}
 
 	C_ImMMenuTextMultiColor GetPopupText() { return C_ImMMenuTextMultiColor(PopupText); }
