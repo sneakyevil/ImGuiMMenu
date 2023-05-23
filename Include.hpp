@@ -157,7 +157,7 @@ public:
 
 		void AddSeparator(std::string m_Name)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_Separator))
 				return;
 
 			C_ImMMenuItemSeparator* m_Item = new C_ImMMenuItemSeparator(m_Name);
@@ -175,7 +175,7 @@ public:
 
 		void AddTextUnselectable(std::string m_Name)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_TextUnselectable))
 				return;
 
 			C_ImMMenuItem* m_Item = new C_ImMMenuItem(ImMMenuItemType_TextUnselectable, m_Name);
@@ -184,7 +184,7 @@ public:
 
 		bool AddSection(std::string m_Name)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_Section))
 				return false;
 
 			C_ImMMenuItem* m_Item = new C_ImMMenuItem(ImMMenuItemType_Section, m_Name);
@@ -193,7 +193,7 @@ public:
 
 		bool AddCheckbox(std::string m_Name, bool* m_Value)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_Checkbox))
 				return false;
 
 			C_ImMMenuItemCheckbox* m_Item = new C_ImMMenuItemCheckbox(m_Name, m_Value);
@@ -202,7 +202,7 @@ public:
 
 		bool AddCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_Combo))
 				return false;
 
 			C_ImMMenuItemCombo* m_Item = new C_ImMMenuItemCombo(m_Name, m_Value, m_Items);
@@ -211,7 +211,7 @@ public:
 
 		bool AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_ComboCheckbox))
 				return false;
 
 			C_ImMMenuItemComboCheckbox* m_Item = new C_ImMMenuItemComboCheckbox(m_Name, m_Value, m_Values, m_Items);
@@ -220,7 +220,7 @@ public:
 
 		bool AddInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power = 1)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_Integer))
 				return false;
 
 			C_ImMMenuItemInteger* m_Item = new C_ImMMenuItemInteger(m_Name, m_Value, m_Min, m_Max, m_Power);
@@ -229,7 +229,7 @@ public:
 
 		bool AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f")
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_Float))
 				return false;
 
 			C_ImMMenuItemFloat* m_Item = new C_ImMMenuItemFloat(m_Name, m_Value, m_Min, m_Max, m_Power, m_PreviewFormat);
@@ -238,7 +238,7 @@ public:
 
 		bool AddKeybind(std::string m_Name, ImGuiKey* m_Value)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_Keybind))
 				return false;
 
 			C_ImMMenuItemKeybind* m_Item = new C_ImMMenuItemKeybind(m_Name, m_Value);
@@ -248,7 +248,7 @@ public:
 		std::string m_TextInputBuffer;
 		bool AddTextInput(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags = 0, bool m_HideBuffer = false)
 		{
-			if (IsDummy(ImMMenuItemType_Text))
+			if (IsDummy(ImMMenuItemType_InputText))
 				return false;
 
 			C_ImMMenuItemInputText* m_Item = new C_ImMMenuItemInputText(m_Name, m_PopupText, m_Buffer, m_BufferSize, m_Flags, m_HideBuffer);
@@ -288,17 +288,16 @@ public:
 					m_Selected = 0;
 					m_Index = 0;
 				}
-				else
+				else if (m_MaxIndex >= 0)
 				{
+					int m_SelectedInList = GetSelectable(m_Selected);
 					while (1)
 					{
-						int m_SelectedInList = GetSelectable(m_Selected);
-						if (m_Index > m_SelectedInList)
-							m_Index = std::max(m_Index - 1, 0);
-						else if (m_SelectedInList >= (m_Index + m_NumToShow))
-							m_Index = std::min(m_Index + 1, std::max(m_MaxIndex, 0));
-						else
+						// If selectable is visible in render...
+						if (m_SelectedInList >= m_Index && (m_Index + m_NumToShow) > m_SelectedInList)
 							break;
+
+						m_Index = (m_Index + m_SelectionChange) % (m_MaxIndex + 1);
 					}
 				}
 			}
@@ -307,6 +306,38 @@ public:
 				m_Index = 0;
 				m_Selected = -1; // We got no item to select, disable selection...
 			}
+		}
+
+		// Section Handling
+		std::vector<int> m_SectionsLast;
+		std::vector<std::pair<int, int>> m_SectionLastPos;
+		int m_Section = -1;
+
+		__inline int GetSection() { return m_Section; }
+
+		void SetSection(int m_NewSection)
+		{
+			m_SectionsLast.emplace_back(m_Section);
+			m_SectionLastPos.emplace_back(m_Index, m_Selected);
+
+			m_Section = m_NewSection;
+			ResetSelection();
+		}
+
+		void SetLastSection()
+		{
+			if (m_SectionsLast.empty())
+				return;
+
+			ResetSelection();
+
+			std::pair<int, int> m_SectionPos = m_SectionLastPos.back();
+			m_Index = m_SectionPos.first;
+			m_Selected = m_SectionPos.second;
+			m_Section = m_SectionsLast.back();
+
+			m_SectionsLast.pop_back();
+			m_SectionLastPos.pop_back();
 		}
 	};
 	Item_t Item;
@@ -375,14 +406,23 @@ public:
 			ImVec2 m_InitialPos = m_Pos;
 			for (int t = 0; m_Text->Count > t; ++t)
 			{
-				Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_Text->String[t][0]);
-				m_Pos.x += m_Font->CalcTextSizeA(m_FontSize, FLT_MAX, 0.f, &m_Text->String[t][0]).x;
-
-				if (strchr(&m_Text->String[t][0], '\n'))
+				std::string m_String = m_Text->String[t];
+				while (1)
 				{
+					size_t m_NewlinePos = m_String.find_first_of('\n');
+					if (m_NewlinePos == std::string::npos)
+						break;
+
+					Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String.substr(0, m_NewlinePos)[0]);
+
+					m_String.erase(0, m_NewlinePos + 1);
+
 					m_Pos.x = m_InitialPos.x;
 					m_Pos.y += m_FontSize;
 				}
+
+				Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String[0]);
+				m_Pos.x += m_Font->CalcTextSizeA(m_FontSize, FLT_MAX, 0.f, &m_String[0]).x;
 			}
 		}
 	};
@@ -865,14 +905,17 @@ public:
 					Item.UpdateInteraction();
 
 					C_ImMMenuItem* m_InteractedItem = Item.GetInteracted();
-					if (m_InteractedItem->Type == ImMMenuItemType_Keybind)
-						Input.IsInteractingWithKeybind = true;
-					else if (m_InteractedItem->Type == ImMMenuItemType_InputText)
+					if (m_InteractedItem)
 					{
-						Item.m_Interacted = -1;
-						Item.m_TextInputBuffer = reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->Buffer;
-						Item.m_TextInputBuffer.resize(reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->BufferSize);
-						Input.IsInteractingWithInputText = true;
+						if (m_InteractedItem->Type == ImMMenuItemType_Keybind)
+							Input.IsInteractingWithKeybind = true;
+						else if (m_InteractedItem->Type == ImMMenuItemType_InputText)
+						{
+							Item.m_Interacted = -1;
+							Item.m_TextInputBuffer = reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->Buffer;
+							Item.m_TextInputBuffer.resize(reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->BufferSize);
+							Input.IsInteractingWithInputText = true;
+						}
 					}
 				}
 				Input.m_SelectInteraction = false;

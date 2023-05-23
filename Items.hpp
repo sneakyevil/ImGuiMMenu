@@ -26,10 +26,10 @@ public:
 	virtual ~C_ImMMenuItem() { }
 	virtual void Interaction() { }
 	virtual bool SideInteraction(int m_Value) { return false; }
-
+		
 	C_ImMMenuItem() { }
 	C_ImMMenuItem(E_ImMMenuItemType m_Type) { Type = m_Type; }
-	C_ImMMenuItem(E_ImMMenuItemType m_Type, std::string m_Name) { Type = m_Type; Name = m_Name; }
+	C_ImMMenuItem(E_ImMMenuItemType m_Type, std::string& m_Name) { Type = m_Type; Name = m_Name; }
 
 	C_ImMMenuTextMultiColor GetName() { return C_ImMMenuTextMultiColor(Name); }
 	C_ImMMenuTextMultiColor GetDescription() { return C_ImMMenuTextMultiColor(Description); }
@@ -38,7 +38,7 @@ public:
 class C_ImMMenuItemSeparator : public C_ImMMenuItem
 {
 public:
-	C_ImMMenuItemSeparator(std::string m_Name) : C_ImMMenuItem(ImMMenuItemType_Separator, m_Name) { }
+	C_ImMMenuItemSeparator(std::string& m_Name) : C_ImMMenuItem(ImMMenuItemType_Separator, m_Name) { }
 };
 
 class C_ImMMenuItemCheckbox : public C_ImMMenuItem
@@ -51,7 +51,7 @@ public:
 		*Value = !*Value;
 	}
 
-	C_ImMMenuItemCheckbox(std::string m_Name, bool* m_Value)
+	C_ImMMenuItemCheckbox(std::string& m_Name, bool* m_Value)
 		: C_ImMMenuItem(ImMMenuItemType_Checkbox, m_Name)
 	{
 		Value = m_Value;
@@ -79,7 +79,7 @@ public:
 		return true;
 	}
 
-	C_ImMMenuItemCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items)
+	C_ImMMenuItemCombo(std::string& m_Name, int* m_Value, std::vector<std::string>& m_Items)
 		: C_ImMMenuItem(ImMMenuItemType_Combo, m_Name)
 	{
 		Value	= m_Value;
@@ -100,7 +100,7 @@ public:
 		Values->operator[](*Value) = !Values->operator[](*Value);
 	}
 
-	C_ImMMenuItemComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
+	C_ImMMenuItemComboCheckbox(std::string& m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
 		: C_ImMMenuItemCombo(m_Name, m_Value, m_Items)
 	{
 		Type = ImMMenuItemType_ComboCheckbox;
@@ -129,7 +129,7 @@ public:
 		return true;
 	}
 
-	C_ImMMenuItemInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power)
+	C_ImMMenuItemInteger(std::string& m_Name, int* m_Value, int m_Min, int m_Max, int m_Power)
 		: C_ImMMenuItem(ImMMenuItemType_Integer, m_Name)
 	{
 		Value = m_Value;
@@ -163,7 +163,7 @@ public:
 		return true;
 	}
 
-	C_ImMMenuItemFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power, const char* m_PreviewFormat)
+	C_ImMMenuItemFloat(std::string& m_Name, float* m_Value, float m_Min, float m_Max, float m_Power, const char* m_PreviewFormat)
 		: C_ImMMenuItem(ImMMenuItemType_Float, m_Name)
 	{
 		Value = m_Value;
@@ -190,7 +190,7 @@ class C_ImMMenuItemKeybind : public C_ImMMenuItem
 public:
 	ImGuiKey* Value;
 
-	C_ImMMenuItemKeybind(std::string m_Name, ImGuiKey* m_Value)
+	C_ImMMenuItemKeybind(std::string& m_Name, ImGuiKey* m_Value)
 		: C_ImMMenuItem(ImMMenuItemType_Keybind, m_Name)
 	{
 		Value = m_Value;
@@ -208,7 +208,7 @@ public:
 	ImGuiInputTextFlags Flags;
 	bool HideBuffer;
 
-	C_ImMMenuItemInputText(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags, bool m_HideBuffer)
+	C_ImMMenuItemInputText(std::string& m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags, bool m_HideBuffer)
 		: C_ImMMenuItem(ImMMenuItemType_InputText, m_Name)
 	{
 		PopupText	= m_PopupText;
