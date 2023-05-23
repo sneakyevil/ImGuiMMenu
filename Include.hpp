@@ -597,8 +597,11 @@ public:
 		{
 			// Draw
 			for (int i = Item.m_Index; std::min(Item.GetCount(), Item.m_Index + Item.m_NumToShow) > i; ++i)
-			{
+			{		
 				C_ImMMenuItem* m_Item = Item.Get(i);
+				if (!m_Item)
+					continue;
+
 				C_ImMMenuTextMultiColor m_ItemName = m_Item->GetName();
 
 				ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_ItemName.GetFullString()[0]);
