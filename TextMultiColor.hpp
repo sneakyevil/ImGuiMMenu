@@ -64,3 +64,17 @@ public:
 	C_ImMMenuTextMultiColor() { }
 	C_ImMMenuTextMultiColor(std::string m_Text) { Initialize(m_Text); }
 };
+
+class C_ImMMenuTextMultiColorClip
+{
+public:
+	ImVec2 Offset;
+	ImVec4 Clip;
+
+	C_ImMMenuTextMultiColorClip() { }
+	C_ImMMenuTextMultiColorClip(ImVec2 m_Offset, ImVec4 m_Clip)
+	{
+		Offset = m_Offset;
+		Clip = m_Clip;
+	}
+};

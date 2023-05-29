@@ -65,6 +65,7 @@ class C_ImMMenuItemCombo : public C_ImMMenuItem
 public:
 	int* Value;
 	std::vector<std::string> Items;
+	bool Clamp;
 
 	virtual bool SideInteraction(int m_Value)
 	{
@@ -72,19 +73,20 @@ public:
 
 		*Value += m_Value;
 		if (*Value >= m_Size)
-			*Value = 0;
+			*Value = (Clamp ? m_Size - 1 : 0);
 		else if (0 > *Value)
-			*Value = m_Size - 1;
+			*Value = (Clamp ? 0 : m_Size - 1);
 
 		return true;
 	}
 
-	C_ImMMenuItemCombo(std::string& m_Name, int* m_Value, std::vector<std::string>& m_Items)
+	C_ImMMenuItemCombo(std::string& m_Name, int* m_Value, std::vector<std::string>& m_Items, bool m_Clamp)
 		: C_ImMMenuItem(ImMMenuItemType_Combo, m_Name)
 	{
 		Value	= m_Value;
 		*Value	= std::max(0, std::min(*Value, static_cast<int>(m_Items.size())));
 		Items	= m_Items;
+		Clamp	= m_Clamp;
 	}
 
 	C_ImMMenuTextMultiColor GetPreview() { return C_ImMMenuTextMultiColor(Items[*Value]); }
@@ -100,8 +102,8 @@ public:
 		Values->operator[](*Value) = !Values->operator[](*Value);
 	}
 
-	C_ImMMenuItemComboCheckbox(std::string& m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
-		: C_ImMMenuItemCombo(m_Name, m_Value, m_Items)
+	C_ImMMenuItemComboCheckbox(std::string& m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items, bool m_Clamp)
+		: C_ImMMenuItemCombo(m_Name, m_Value, m_Items, m_Clamp)
 	{
 		Type = ImMMenuItemType_ComboCheckbox;
 
@@ -117,19 +119,20 @@ public:
 	int* Value;
 	int Min, Max;
 	int Power;
+	bool Clamp;
 
 	virtual bool SideInteraction(int m_Value)
 	{
 		*Value += (m_Value * Power);
 		if (*Value > Max)
-			*Value = Min;
+			*Value = (Clamp ? Max : Min);
 		else if (Min > *Value)
-			*Value = Max;
+			*Value = (Clamp ? Min : Max);
 
 		return true;
 	}
 
-	C_ImMMenuItemInteger(std::string& m_Name, int* m_Value, int m_Min, int m_Max, int m_Power)
+	C_ImMMenuItemInteger(std::string& m_Name, int* m_Value, int m_Min, int m_Max, int m_Power, bool m_Clamp)
 		: C_ImMMenuItem(ImMMenuItemType_Integer, m_Name)
 	{
 		Value = m_Value;
@@ -138,6 +141,7 @@ public:
 		Min = m_Min;
 		Max = m_Max;
 		Power = m_Power;
+		Clamp = m_Clamp;
 	}
 
 	__inline std::string GetPreview() { return std::to_string(*Value); }
@@ -149,6 +153,7 @@ public:
 	float* Value;
 	float Min, Max;
 	float Power;
+	bool Clamp;
 
 	const char* PreviewFormat;
 
@@ -156,14 +161,14 @@ public:
 	{
 		*Value += (static_cast<float>(m_Value) * Power);
 		if (*Value > Max)
-			*Value = Min;
+			*Value = (Clamp ? Max : Min);
 		else if (Min > *Value)
-			*Value = Max;
+			*Value = (Clamp ? Max : Min);
 
 		return true;
 	}
 
-	C_ImMMenuItemFloat(std::string& m_Name, float* m_Value, float m_Min, float m_Max, float m_Power, const char* m_PreviewFormat)
+	C_ImMMenuItemFloat(std::string& m_Name, float* m_Value, float m_Min, float m_Max, float m_Power, bool m_Clamp, const char* m_PreviewFormat)
 		: C_ImMMenuItem(ImMMenuItemType_Float, m_Name)
 	{
 		Value = m_Value;
@@ -172,6 +177,7 @@ public:
 		Min = m_Min;
 		Max = m_Max;
 		Power = m_Power;
+		Clamp = m_Clamp;
 
 		PreviewFormat = m_PreviewFormat;
 	}

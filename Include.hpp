@@ -5,6 +5,9 @@
 
 #define IMMENU_TEXT_CENTER_VERTICAL 0.375f // You might need to change this later, but the font that is used by default has weird padding on top...
 
+#define IMMENU_ITEM_NAME_SCROLL_SPEED 100.0f
+#define IMMENU_ITEM_NAME_SCROLL_WAIT_TIME 3.0
+
 #include "Fonts/Primary.hpp"
 #include "Fonts/Header.hpp"
 #include "Fonts/Icons.hpp" // <, =, >
@@ -200,39 +203,39 @@ public:
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		bool AddCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items)
+		bool AddCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items, bool m_Clamp = false)
 		{
 			if (IsDummy(ImMMenuItemType_Combo))
 				return false;
 
-			C_ImMMenuItemCombo* m_Item = new C_ImMMenuItemCombo(m_Name, m_Value, m_Items);
+			C_ImMMenuItemCombo* m_Item = new C_ImMMenuItemCombo(m_Name, m_Value, m_Items, m_Clamp);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		bool AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items)
+		bool AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items, bool m_Clamp = false)
 		{
 			if (IsDummy(ImMMenuItemType_ComboCheckbox))
 				return false;
 
-			C_ImMMenuItemComboCheckbox* m_Item = new C_ImMMenuItemComboCheckbox(m_Name, m_Value, m_Values, m_Items);
+			C_ImMMenuItemComboCheckbox* m_Item = new C_ImMMenuItemComboCheckbox(m_Name, m_Value, m_Values, m_Items, m_Clamp);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		bool AddInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power = 1)
+		bool AddInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power = 1, bool m_Clamp = false)
 		{
 			if (IsDummy(ImMMenuItemType_Integer))
 				return false;
 
-			C_ImMMenuItemInteger* m_Item = new C_ImMMenuItemInteger(m_Name, m_Value, m_Min, m_Max, m_Power);
+			C_ImMMenuItemInteger* m_Item = new C_ImMMenuItemInteger(m_Name, m_Value, m_Min, m_Max, m_Power, m_Clamp);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
-		bool AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f")
+		bool AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f", bool m_Clamp = false)
 		{
 			if (IsDummy(ImMMenuItemType_Float))
 				return false;
 
-			C_ImMMenuItemFloat* m_Item = new C_ImMMenuItemFloat(m_Name, m_Value, m_Min, m_Max, m_Power, m_PreviewFormat);
+			C_ImMMenuItemFloat* m_Item = new C_ImMMenuItemFloat(m_Name, m_Value, m_Min, m_Max, m_Power, m_Clamp, m_PreviewFormat);
 			return (m_Interacted == AddNewItem(m_Item));
 		}
 
@@ -342,6 +345,58 @@ public:
 	};
 	Item_t Item;
 
+	// This handles basic scrolling mechanism when item name text is long...
+	struct ItemNameScroll_t
+	{
+		bool m_Direction = false;
+		float m_Value = 0.f;
+		double m_UpdateTime = 0.0;
+
+		void Reset(double m_CurrentTime, double m_WaitTime)
+		{
+			m_Direction = false;
+			m_Value = 0.f;
+			m_UpdateTime = (m_CurrentTime + m_WaitTime);
+		}
+
+		void Update(double m_CurrentTime, float m_Min, float m_Max, float m_Speed, double m_WaitTime)
+		{
+			// Don't update when update time is bigger
+			if (m_UpdateTime > m_CurrentTime)
+				return;
+
+			if (m_UpdateTime != 0.0)
+			{
+				float m_ChangeValue = static_cast<float>(m_CurrentTime - m_UpdateTime) * m_Speed;
+				if (m_Direction)
+				{
+					m_Value += m_ChangeValue;
+					if (m_Value > m_Max)
+					{
+						m_Direction = false;
+						m_Value = m_Max;
+						m_UpdateTime = (m_CurrentTime + m_WaitTime);
+						return;
+					}
+				}
+				else
+				{
+					m_Value -= m_ChangeValue;
+					if (m_Value < m_Min)
+					{
+						m_Direction = true;
+						m_Value = m_Min;
+						m_UpdateTime = (m_CurrentTime + m_WaitTime);
+						return;
+					}
+				}
+			}
+
+			m_UpdateTime = m_CurrentTime;
+		}
+	};
+	ItemNameScroll_t ItemNameScroll;
+
 	struct Icons_t
 	{
 		ImFont* Font = nullptr;
@@ -401,9 +456,14 @@ public:
 
 		__inline ImDrawList* Get() { return List; }
 
-		__inline void AddMultiColorText(ImFont* m_Font, float m_FontSize, ImVec2 m_Pos, C_ImMMenuTextMultiColor* m_Text)
+		__inline void AddMultiColorText(ImFont* m_Font, float m_FontSize, ImVec2 m_Pos, C_ImMMenuTextMultiColor* m_Text, C_ImMMenuTextMultiColorClip* m_TextClip = nullptr)
 		{
+			if (m_TextClip)
+				m_Pos += m_TextClip->Offset;
+
 			ImVec2 m_InitialPos = m_Pos;
+			ImVec4* m_Clip = (m_TextClip ? &m_TextClip->Clip : nullptr);
+
 			for (int t = 0; m_Text->Count > t; ++t)
 			{
 				std::string m_String = m_Text->String[t];
@@ -413,7 +473,7 @@ public:
 					if (m_NewlinePos == std::string::npos)
 						break;
 
-					Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String.substr(0, m_NewlinePos)[0]);
+					Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String.substr(0, m_NewlinePos)[0], nullptr, 0.f, m_Clip);
 
 					m_String.erase(0, m_NewlinePos + 1);
 
@@ -421,7 +481,7 @@ public:
 					m_Pos.y += m_FontSize;
 				}
 
-				Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String[0]);
+				Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String[0], nullptr, 0.f, m_Clip);
 				m_Pos.x += m_Font->CalcTextSizeA(m_FontSize, FLT_MAX, 0.f, &m_String[0]).x;
 			}
 		}
@@ -629,7 +689,16 @@ public:
 				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, floorf((m_FrameHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
 				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), (m_Selected ? Color.ItemSelected : Color.Item));
-				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_ItemName);
+
+				const float m_ItemNameHorizontalMax = floorf(m_FrameWidth * 0.5f);
+				C_ImMMenuTextMultiColorClip m_ItemNameClip({ 0.f, 0.f }, { m_TextPos.x, m_TextPos.y, m_TextPos.x + m_ItemNameHorizontalMax, m_TextPos.y + m_TextSize.y });
+				if (m_Selected && m_TextSize.x > m_ItemNameHorizontalMax)
+				{
+					ItemNameScroll.Update(m_BeginTime, m_ItemNameHorizontalMax - m_TextSize.x, 0.f, IMMENU_ITEM_NAME_SCROLL_SPEED, IMMENU_ITEM_NAME_SCROLL_WAIT_TIME);
+					m_ItemNameClip.Offset.x += ItemNameScroll.m_Value;
+				}
+
+				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_ItemName, &m_ItemNameClip);
 
 				// Right-side Element
 				switch (m_Item->Type)
@@ -890,6 +959,7 @@ public:
 			if (Input.m_SelectUpDown != 0)
 			{
 				Item.Update(static_cast<int>(Input.m_SelectUpDown));
+				ItemNameScroll.Reset(m_BeginTime, (IMMENU_ITEM_NAME_SCROLL_WAIT_TIME * 0.5));
 				Input.m_SelectUpDown = 0;
 			}
 
