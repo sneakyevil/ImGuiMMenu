@@ -397,6 +397,21 @@ public:
 	};
 	ItemNameScroll_t ItemNameScroll;
 
+	float GetItemNameMaxWidth(E_ImMMenuItemType m_ItemType)
+	{
+		switch (m_ItemType)
+		{
+		case ImMMenuItemType_Text: case ImMMenuItemType_TextUnselectable:
+			return (m_FrameWidth - 20.f);
+
+		case ImMMenuItemType_Section: case ImMMenuItemType_Checkbox:
+			return floorf(m_FrameWidth * 0.85f);
+
+		default:
+			return floorf(m_FrameWidth * 0.75f);
+		}
+	}
+
 	struct Icons_t
 	{
 		ImFont* Font = nullptr;
@@ -690,7 +705,7 @@ public:
 
 				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), (m_Selected ? Color.ItemSelected : Color.Item));
 
-				const float m_ItemNameHorizontalMax = floorf(m_FrameWidth * 0.5f);
+				const float m_ItemNameHorizontalMax = GetItemNameMaxWidth(m_Item->Type);
 				C_ImMMenuTextMultiColorClip m_ItemNameClip({ 0.f, 0.f }, { m_TextPos.x, m_TextPos.y, m_TextPos.x + m_ItemNameHorizontalMax, m_TextPos.y + m_TextSize.y });
 				if (m_Selected && m_TextSize.x > m_ItemNameHorizontalMax)
 				{
