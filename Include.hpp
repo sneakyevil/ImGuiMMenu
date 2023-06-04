@@ -670,6 +670,14 @@ public:
 		// Items
 		if (Item.GetCount())
 		{
+			// Reset index & selectable when selectable is above count
+			// Probably would need add hash item lookup to reset selectable position...
+			if (Item.m_Selected >= Item.GetSelectableCount())
+			{
+				Item.m_Index = 0;
+				Item.m_Selected = -1;
+			}
+
 			// Draw
 			for (int i = Item.m_Index; std::min(Item.GetCount(), Item.m_Index + Item.m_NumToShow) > i; ++i)
 			{		

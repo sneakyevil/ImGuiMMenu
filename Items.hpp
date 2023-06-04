@@ -163,7 +163,7 @@ public:
 		if (*Value > Max)
 			*Value = (Clamp ? Max : Min);
 		else if (Min > *Value)
-			*Value = (Clamp ? Max : Min);
+			*Value = (Clamp ? Min : Min);
 
 		return true;
 	}
