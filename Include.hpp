@@ -672,10 +672,11 @@ public:
 		{
 			// Reset index & selectable when selectable is above count
 			// Probably would need add hash item lookup to reset selectable position...
-			if (Item.m_Selected >= Item.GetSelectableCount())
+			int m_SelectableCount = Item.GetSelectableCount();
+			if (Item.m_Selected >= m_SelectableCount)
 			{
 				Item.m_Index = 0;
-				Item.m_Selected = -1;
+				Item.m_Selected = (m_SelectableCount ? 0 : -1);
 			}
 
 			// Draw
