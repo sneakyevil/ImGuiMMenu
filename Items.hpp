@@ -123,11 +123,15 @@ public:
 
 	virtual bool SideInteraction(int m_Value)
 	{
+		bool m_ShouldClamp = (Clamp || (*Value != Min && *Value != Max));
 		*Value += (m_Value * Power);
-		if (*Value > Max)
-			*Value = (Clamp ? Max : Min);
+
+		if (m_ShouldClamp)
+			*Value = std::max(Min, std::min(*Value, Max));
+		else if (*Value > Max)
+			*Value = Min;
 		else if (Min > *Value)
-			*Value = (Clamp ? Min : Max);
+			*Value = Max;
 
 		return true;
 	}
@@ -159,11 +163,15 @@ public:
 
 	virtual bool SideInteraction(int m_Value)
 	{
+		bool m_ShouldClamp = (Clamp || (*Value != Min && *Value != Max));
 		*Value += (static_cast<float>(m_Value) * Power);
-		if (*Value > Max)
-			*Value = (Clamp ? Max : Min);
+
+		if (m_ShouldClamp)
+			*Value = fmaxf(Min, fminf(*Value, Max));
+		else if (*Value > Max)
+			*Value = Min;
 		else if (Min > *Value)
-			*Value = (Clamp ? Min : Min);
+			*Value = Max;
 
 		return true;
 	}
