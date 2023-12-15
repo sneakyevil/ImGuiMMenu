@@ -105,7 +105,7 @@ public:
 		: C_ImMMenuItem(eImMMenuItemType_Combo, p_Name)
 	{
 		m_Value		= p_Value;
-		*m_Value	= ImClamp(*m_Value, 0, static_cast<int>(m_Items.size()));
+		*m_Value	= ImClamp(*m_Value, 0, static_cast<int>(p_Items.size()));
 		m_Items		= p_Items;
 		m_Clamp		= p_Clamp;
 	}
