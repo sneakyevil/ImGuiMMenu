@@ -90,13 +90,15 @@ public:
 
 	virtual bool SideInteraction(int p_Value)
 	{
-		int m_Size = static_cast<int>(m_Items.size());
+		int iSize = static_cast<int>(m_Items.size());
 
 		*m_Value += p_Value;
-		if (*m_Value >= m_Size)
-			*m_Value = (m_Clamp ? m_Size - 1 : 0);
-		else if (0 > *m_Value)
-			*m_Value = (m_Clamp ? 0 : m_Size - 1);
+		if (*m_Value >= iSize) {
+			*m_Value = (m_Clamp ? iSize - 1 : 0);
+		}
+		else if (0 > *m_Value) {
+			*m_Value = (m_Clamp ? 0 : iSize - 1);
+		}
 
 		return true;
 	}
@@ -149,15 +151,18 @@ public:
 
 	virtual bool SideInteraction(int p_Value)
 	{
-		bool m_ShouldClamp = (m_Clamp || (*m_Value != m_Min && *m_Value != m_Max));
+		bool bShouldClamp = (m_Clamp || (*m_Value != m_Min && *m_Value != m_Max));
 		*m_Value += (p_Value * m_Power);
 
-		if (m_ShouldClamp)
+		if (bShouldClamp) {
 			*m_Value = ImClamp(*m_Value, m_Min, m_Max);
-		else if (*m_Value > m_Max)
+		}
+		else if (*m_Value > m_Max) {
 			*m_Value = m_Min;
-		else if (m_Min > *m_Value)
+		}
+		else if (m_Min > *m_Value) {
 			*m_Value = m_Max;
+		}
 
 		return true;
 	}
@@ -192,15 +197,18 @@ public:
 
 	virtual bool SideInteraction(int p_Value)
 	{
-		bool m_ShouldClamp = (m_Clamp || (*m_Value != m_Min && *m_Value != m_Max));
+		bool bShouldClamp = (m_Clamp || (*m_Value != m_Min && *m_Value != m_Max));
 		*m_Value += (static_cast<float>(p_Value) * m_Power);
 
-		if (m_ShouldClamp)
+		if (bShouldClamp) {
 			*m_Value = ImClamp(*m_Value, m_Min, m_Max);
-		else if (*m_Value > m_Max)
+		}
+		else if (*m_Value > m_Max) {
 			*m_Value = m_Min;
-		else if (m_Min > *m_Value)
+		}
+		else if (m_Min > *m_Value) {
 			*m_Value = m_Max;
+		}
 
 		return true;
 	}
@@ -219,12 +227,11 @@ public:
 		m_PreviewFormat = p_PreviewFormat;
 	}
 
-	__inline std::string GetPreview()
+	const char* GetPreview()
 	{
-		std::string m_Preview(32, '\0');
-		sprintf_s(&m_Preview[0], m_Preview.size(), m_PreviewFormat, *m_Value);
-
-		return m_Preview;
+		const char* pBuffer;
+		ImFormatStringToTempBuffer(&pBuffer, 0, m_PreviewFormat, *m_Value);
+		return pBuffer;
 	}
 };
 

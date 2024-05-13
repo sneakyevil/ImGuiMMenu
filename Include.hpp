@@ -15,42 +15,56 @@
 #include "TextMultiColor.hpp"
 #include "Items.hpp"
 
+#define IMMENU_ICON_LEFTARROW			"<"
+#define IMMENU_ICON_RIGHTARROW			">"
+#define IMMENU_ICON_UPDOWNARROW			"="
+
 class C_ImMMenu
 {
 public:
+	//==========================================================================
 	// Members
+
 	ImVec2 m_Pos;
 	float m_FrameWidth;
+	double m_CurrentTime = 0.0;
+	ImDrawList* m_DrawList;
+	ImVec2 m_DrawPos;
 
-	double m_BeginTime = 0.0;
-
-	float m_DPIScale = 1.f;
-	__inline float CalcDPI(float x) { return floorf(m_DPIScale * x); }
+	//==========================================================================
+	// Header
 
 	struct Header_t
 	{
 		float m_Height;
-		C_ImMMenuTextMultiColor Text;
+		C_ImMMenuTextMultiColor m_Text;
 
 		void* m_Image = nullptr;
 		ImVec2 m_ImageSize;
 	};
 	Header_t Header;
-	__inline void SetHeaderText(std::string m_Text) { Header.Text.Initialize(m_Text); }
+	__inline void SetHeaderText(std::string m_Text) { Header.m_Text.Initialize(m_Text); }
 
-	struct Title_t
-	{
-		C_ImMMenuTextMultiColor Text;
-	};
-	Title_t Title;
-	__inline void SetTitleText(std::string m_Text) { Title.Text.Initialize(m_Text); }
+	//==========================================================================
+	// Title Text
 
-	struct Footer_t
-	{
-		C_ImMMenuTextMultiColor Text;
-	};
-	Footer_t Footer;
-	__inline void SetFooterText(std::string m_Text) { Footer.Text.Initialize(m_Text); }
+	C_ImMMenuTextMultiColor m_TitleText;
+	__inline void SetTitleText(std::string m_Text) 
+	{ 
+		m_TitleText.Initialize(m_Text);
+	}
+
+	//==========================================================================
+	// Footer
+
+	C_ImMMenuTextMultiColor m_FooterText;
+	__inline void SetFooterText(std::string m_Text) 
+	{ 
+		m_FooterText.Initialize(m_Text);
+	}
+
+	//==========================================================================
+	// Item
 
 	struct Item_t
 	{
@@ -326,25 +340,29 @@ public:
 		std::vector<std::pair<int, int>> m_SectionLastPos;
 		int m_Section = -1;
 
-		__inline int GetSection() { return m_Section; }
+		__inline int GetSection() 
+		{ 
+			return m_Section; 
+		}
 
-		void SetSection(int m_NewSection)
+		void SetSection(int p_NewSection)
 		{
 			m_SectionsLast.emplace_back(m_Section);
 			m_SectionLastPos.emplace_back(m_Index, m_Selected);
 
-			m_Section = m_NewSection;
+			m_Section = p_NewSection;
 			ResetSelection();
 		}
 
 		void SetLastSection()
 		{
-			if (m_SectionsLast.empty())
+			if (m_SectionsLast.empty()) {
 				return;
+			}
 
 			ResetSelection();
 
-			std::pair<int, int> m_SectionPos = m_SectionLastPos.back();
+			auto& m_SectionPos = m_SectionLastPos.back();
 			m_Index = m_SectionPos.first;
 			m_Selected = m_SectionPos.second;
 			m_Section = m_SectionsLast.back();
@@ -372,8 +390,9 @@ public:
 		void Update(double m_CurrentTime, float m_Min, float m_Max, float m_Speed, double m_WaitTime)
 		{
 			// Don't update when update time is bigger
-			if (m_UpdateTime > m_CurrentTime)
+			if (m_UpdateTime > m_CurrentTime) {
 				return;
+			}
 
 			if (m_UpdateTime != 0.0)
 			{
@@ -413,45 +432,28 @@ public:
 		{
 		case eImMMenuItemType_Text: case eImMMenuItemType_TextUnselectable:
 			return (m_FrameWidth - 20.f);
-
 		case eImMMenuItemType_Section: case eImMMenuItemType_Checkbox:
 			return floorf(m_FrameWidth * 0.85f);
-
 		default:
 			return floorf(m_FrameWidth * 0.75f);
 		}
 	}
 
-	struct Icons_t
-	{
-		ImFont* Font = nullptr;
-
-		char LeftArrow[2]	= { '\0' };
-		char RightArrow[2]	= { '\0' };
-		char UpDownArrow[2] = { '\0' };
-
-		bool Initialize()
-		{
-			if (!Font)
-				return false;
-
-			LeftArrow[0]	= '<';
-			RightArrow[0]	= '>';
-			UpDownArrow[0]	= '=';
-
-			return true;
-		}
-	};
-	Icons_t Icons;
-
 	struct Fonts_t
 	{
+		ImFont* Icons = nullptr;
 		ImFont* Primary = nullptr;
 		ImFont* Header = nullptr;
 
-		bool AllLoaded() { return (Primary && Header); }
+		bool AllLoaded() 
+		{ 
+			return (Icons && Primary && Header);
+		}
 
-		__inline ImVec2 CalcTextSize(ImFont* m_Font, const char* m_Text) { return m_Font->CalcTextSizeA(m_Font->FontSize, FLT_MAX, 0.f, m_Text); }
+		__inline ImVec2 CalcTextSize(ImFont* p_Font, const char* p_Text) 
+		{ 
+			return p_Font->CalcTextSizeA(p_Font->FontSize, FLT_MAX, 0.f, p_Text);
+		}
 	};
 	Fonts_t Font;
 
@@ -472,46 +474,6 @@ public:
 		ImU32 Primary_Text			= IM_COL32(255, 255, 255, 255);
 	};
 	Colors_t Color;
-
-	struct Draw_t
-	{
-		ImVec2 m_ScreenSize;
-		ImVec2 m_Pos;
-		ImDrawList* List = nullptr;
-
-		__inline ImDrawList* Get() { return List; }
-
-		__inline void AddMultiColorText(ImFont* m_Font, float m_FontSize, ImVec2 m_Pos, C_ImMMenuTextMultiColor* m_Text, C_ImMMenuTextMultiColorClip* m_TextClip = nullptr)
-		{
-			if (m_TextClip)
-				m_Pos += m_TextClip->Offset;
-
-			ImVec2 m_InitialPos = m_Pos;
-			ImVec4* m_Clip = (m_TextClip ? &m_TextClip->Clip : nullptr);
-
-			for (int t = 0; m_Text->Count > t; ++t)
-			{
-				std::string m_String = m_Text->String[t];
-				while (1)
-				{
-					size_t m_NewlinePos = m_String.find_first_of('\n');
-					if (m_NewlinePos == std::string::npos)
-						break;
-
-					Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String.substr(0, m_NewlinePos)[0], nullptr, 0.f, m_Clip);
-
-					m_String.erase(0, m_NewlinePos + 1);
-
-					m_Pos.x = m_InitialPos.x;
-					m_Pos.y += m_FontSize;
-				}
-
-				Get()->AddText(m_Font, m_FontSize, m_Pos, m_Text->Color[t], &m_String[0], nullptr, 0.f, m_Clip);
-				m_Pos.x += m_Font->CalcTextSizeA(m_FontSize, FLT_MAX, 0.f, &m_String[0]).x;
-			}
-		}
-	};
-	Draw_t Draw;
 
 	struct Input_t
 	{
@@ -568,11 +530,13 @@ public:
 					continue;
 				}
 
-				if (m_NavigationLastPress[i] > m_CurrentTime)
+				if (m_NavigationLastPress[i] > m_CurrentTime) {
 					continue;
+				}
 
-				if (m_NavigationEmulatedPressMaxCount > m_NagivationEmulatedPressCount[i])
+				if (m_NavigationEmulatedPressMaxCount > m_NagivationEmulatedPressCount[i]) {
 					++m_NagivationEmulatedPressCount[i];
+				}
 
 				m_NavigationLastPress[i] = (m_CurrentTime + (m_NavigationRepeatDelta / (static_cast<double>(m_NagivationEmulatedPressCount[i]) * 0.5)));
 
@@ -610,23 +574,20 @@ public:
 	{
 		ImGuiIO* m_IO = &ImGui::GetIO();
 
-		// Icons
-		Icons.Font = m_IO->Fonts->AddFontFromMemoryCompressedTTF(ImGuiMMenu::Font::Icons_Data, ImGuiMMenu::Font::Icons_SizeData, CalcDPI(16.f));
-		if (!Icons.Initialize())
-			return false;
-
 		// Fonts
-		Font.Primary	= m_IO->Fonts->AddFontFromMemoryCompressedTTF(ImGuiMMenu::Font::Primary_Data, ImGuiMMenu::Font::Primary_SizeData, CalcDPI(16.f));
-		Font.Header		= m_IO->Fonts->AddFontFromMemoryCompressedTTF(ImGuiMMenu::Font::Header_Data, ImGuiMMenu::Font::Header_SizeData, CalcDPI(32.f));
+		Font.Icons		= m_IO->Fonts->AddFontFromMemoryCompressedTTF(ImGuiMMenu::Font::Icons_Data, ImGuiMMenu::Font::Icons_SizeData, 16.f);
+		Font.Primary	= m_IO->Fonts->AddFontFromMemoryCompressedTTF(ImGuiMMenu::Font::Primary_Data, ImGuiMMenu::Font::Primary_SizeData, 16.f);
+		Font.Header		= m_IO->Fonts->AddFontFromMemoryCompressedTTF(ImGuiMMenu::Font::Header_Data, ImGuiMMenu::Font::Header_SizeData, 32.f);
 
-		if (!Font.AllLoaded())
+		if (!Font.AllLoaded()) {
 			return false;
+		}
 
 		// Sizes
 		m_Pos			= ImVec2(0.05f, 0.05f);
-		m_FrameWidth	= CalcDPI(420.f);
+		m_FrameWidth	= 420.f;
 
-		Header.m_Height		= CalcDPI(85.f);
+		Header.m_Height	= 85.f;
 
 		return true;
 	}
@@ -635,50 +596,50 @@ public:
 	{
 		ImGuiIO* m_IO = &ImGui::GetIO();
 
-		m_BeginTime			= ImGui::GetTime();
+		m_CurrentTime	= ImGui::GetTime();
+		m_DrawList		= ImGui::GetBackgroundDrawList();
+		m_DrawPos		= { ImMin(m_IO->DisplaySize.x - m_FrameWidth, floorf(m_Pos.x * m_IO->DisplaySize.x)), floorf(m_Pos.y * m_IO->DisplaySize.y) };
 
-		Draw.m_ScreenSize	= m_IO->DisplaySize;
-		Draw.m_Pos			= ImVec2(fminf(Draw.m_ScreenSize.x - m_FrameWidth, floorf(m_Pos.x * Draw.m_ScreenSize.x)), floorf(m_Pos.y * Draw.m_ScreenSize.y));
-		Draw.List			= ImGui::GetBackgroundDrawList();
-
-		if (Input.m_EnableNative)
-			Input.Update(m_BeginTime);
+		if (Input.m_EnableNative) {
+			Input.Update(m_CurrentTime);
+		}
 
 		//Input.m_CaptureMouse = (!m_IO->WantCaptureMouse);
 
-		return (Draw.List);
+		return true;
 	}
 
 	void End()
 	{
 		// Header
 		{
-			Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, Header.m_Height), Color.Header);
+			m_DrawList->AddRectFilled(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, Header.m_Height), Color.Header);
 
-			if (Header.m_Image)
-				Draw.Get()->AddImage(Header.m_Image, Draw.m_Pos, Draw.m_Pos + Header.m_ImageSize);
-
-			if (Header.Text.Count)
-			{
-				ImVec2 m_TextSize = Font.CalcTextSize(Font.Header, &Header.Text.GetFullString()[0]);
-				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(floorf((m_FrameWidth * 0.5f) - (m_TextSize.x * 0.5f)), floorf((Header.m_Height * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
-				Draw.AddMultiColorText(Font.Header, Font.Header->FontSize, m_TextPos, &Header.Text);
+			if (Header.m_Image) {
+				m_DrawList->AddImage(Header.m_Image, m_DrawPos, m_DrawPos + Header.m_ImageSize);
 			}
 
-			Draw.m_Pos.y += Header.m_Height;
+			if (Header.m_Text.GetCount())
+			{
+				ImVec2 vTextSize = Header.m_Text.CalcTextSize(Font.Header);
+				ImVec2 vTextPos(m_DrawPos + ImVec2(ImFloor((m_FrameWidth * 0.5f) - (vTextSize.x * 0.5f)), ImFloor((Header.m_Height * 0.5f) - (vTextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+				Header.m_Text.Draw(m_DrawList, Font.Header, Font.Header->FontSize, vTextPos);
+			}
+
+			m_DrawPos.y += Header.m_Height;
 		}
 
 		// Title
-		if (Title.Text.Count)
+		if (m_TitleText.GetCount())
 		{
-			float m_TitleHeight = floorf(Font.Primary->FontSize * 2.f);
-			Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_TitleHeight), Color.Title);
+			float fTitleHeight = ImFloor(Font.Primary->FontSize * 2.f);
+			m_DrawList->AddRectFilled(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, fTitleHeight), Color.Title);
 
-			ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &Title.Text.GetFullString()[0]);
-			ImVec2 m_TextPos(Draw.m_Pos + ImVec2(floorf((m_FrameWidth * 0.5f) - (m_TextSize.x * 0.5f)), floorf((m_TitleHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
-			Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &Title.Text);
+			ImVec2 vTextSize = m_TitleText.CalcTextSize(Font.Primary);
+			ImVec2 vTextPos(m_DrawPos + ImVec2(ImFloor((m_FrameWidth * 0.5f) - (vTextSize.x * 0.5f)), ImFloor((fTitleHeight * 0.5f) - (vTextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+			m_TitleText.Draw(m_DrawList, Font.Primary, Font.Primary->FontSize, vTextPos);
 
-			Draw.m_Pos.y += m_TitleHeight;
+			m_DrawPos.y += fTitleHeight;
 		}
 
 		// Items
@@ -696,41 +657,41 @@ public:
 			// Draw
 			for (int i = Item.m_Index; ImMin(Item.GetCount(), Item.m_Index + Item.m_NumToShow) > i; ++i)
 			{		
-				C_ImMMenuItem* m_Item = Item.Get(i);
-				if (!m_Item)
+				C_ImMMenuItem* pItem = Item.Get(i);
+				if (!pItem) {
 					continue;
+				}
 
-				C_ImMMenuTextMultiColor m_ItemName = m_Item->GetName();
+				C_ImMMenuTextMultiColor m_ItemName = pItem->GetName();
 
-				ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_ItemName.GetFullString()[0]);
-				float m_FrameHeight = floorf(m_TextSize.y * 2.f);
+				ImVec2 vTextSize = m_ItemName.CalcTextSize(Font.Primary);
+				float m_FrameHeight = floorf(vTextSize.y * 2.f);
 
 				// Pre Left-side Element
-				if (m_Item->m_Type == eImMMenuItemType_Separator)
+				if (pItem->m_Type == eImMMenuItemType_Separator)
 				{
-					ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_ItemName.GetFullString()[0]);
-					ImVec2 m_TextPos(Draw.m_Pos + ImVec2(floorf((m_FrameWidth * 0.5f) - (m_TextSize.x * 0.5f)), floorf((m_FrameHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+					ImVec2 vTextPos(m_DrawPos + ImVec2(floorf((m_FrameWidth * 0.5f) - (vTextSize.x * 0.5f)), floorf((m_FrameHeight * 0.5f) - (vTextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
-					Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), Color.Item);
+					m_DrawList->AddRectFilled(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, m_FrameHeight), Color.Item);
 
-					ImVec2 m_UnderlinePos(Draw.m_Pos + ImVec2(floorf(m_FrameWidth * 0.5f), floorf((m_FrameHeight * 0.5f) + (m_TextSize.y * 0.75f))));
-					Draw.Get()->AddLine(m_UnderlinePos - ImVec2(floorf(m_TextSize.x * 0.5f) + 10.f, 0.f), m_UnderlinePos + ImVec2(floorf(m_TextSize.x * 0.5f) + 10.f, 0.f), Color.Separator, 2.f);
+					ImVec2 m_UnderlinePos(m_DrawPos + ImVec2(floorf(m_FrameWidth * 0.5f), floorf((m_FrameHeight * 0.5f) + (vTextSize.y * 0.75f))));
+					m_DrawList->AddLine(m_UnderlinePos - ImVec2(floorf(vTextSize.x * 0.5f) + 10.f, 0.f), m_UnderlinePos + ImVec2(floorf(vTextSize.x * 0.5f) + 10.f, 0.f), Color.Separator, 2.f);
 
-					Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_ItemName);
+					m_ItemName.Draw(m_DrawList, Font.Primary, Font.Primary->FontSize, vTextPos);
 
-					Draw.m_Pos.y += m_FrameHeight;
+					m_DrawPos.y += m_FrameHeight;
 					continue;
 				}
 
 				bool m_Selected = (Item.m_Selected >= 0 && i == Item.GetSelectable(Item.m_Selected));
 
-				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, floorf((m_FrameHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+				ImVec2 vTextPos(m_DrawPos + ImVec2(10.f, floorf((m_FrameHeight * 0.5f) - (vTextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
-				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), (m_Selected ? Color.ItemSelected : Color.Item));
+				m_DrawList->AddRectFilled(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, m_FrameHeight), (m_Selected ? Color.ItemSelected : Color.Item));
 
 				// This is fine, for now...
 				/*if (Input.m_CaptureMouse) {
-					if (ImGui::IsMouseHoveringRect(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FrameHeight), false)) {
+					if (ImGui::IsMouseHoveringRect(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, m_FrameHeight), false)) {
 						ImVec2& m_MouseDelta = ImGui::GetIO().MouseDelta;
 						if (m_MouseDelta.x != 0.f || m_MouseDelta.y != 0.f)
 						{
@@ -751,134 +712,143 @@ public:
 					}
 				}*/
 
-				const float m_ItemNameHorizontalMax = GetItemNameMaxWidth(m_Item->m_Type);
-				C_ImMMenuTextMultiColorClip m_ItemNameClip({ 0.f, 0.f }, { m_TextPos.x, m_TextPos.y, m_TextPos.x + m_ItemNameHorizontalMax, m_TextPos.y + m_TextSize.y });
-				if (m_Selected && m_TextSize.x > m_ItemNameHorizontalMax)
+				const float m_ItemNameHorizontalMax = GetItemNameMaxWidth(pItem->m_Type);
+				C_ImMMenuTextMultiColorClip m_ItemNameClip({ 0.f, 0.f }, { vTextPos.x, vTextPos.y, vTextPos.x + m_ItemNameHorizontalMax, vTextPos.y + vTextSize.y });
+				if (m_Selected && vTextSize.x > m_ItemNameHorizontalMax)
 				{
-					ItemNameScroll.Update(m_BeginTime, m_ItemNameHorizontalMax - m_TextSize.x, 0.f, IMMENU_ITEM_NAME_SCROLL_SPEED, IMMENU_ITEM_NAME_SCROLL_WAIT_TIME);
-					m_ItemNameClip.Offset.x += ItemNameScroll.m_Value;
+					ItemNameScroll.Update(m_CurrentTime, m_ItemNameHorizontalMax - vTextSize.x, 0.f, IMMENU_ITEM_NAME_SCROLL_SPEED, IMMENU_ITEM_NAME_SCROLL_WAIT_TIME);
+					m_ItemNameClip.m_Offset.x += ItemNameScroll.m_Value;
 				}
 
-				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &m_ItemName, &m_ItemNameClip);
+				m_ItemName.Draw(m_DrawList, Font.Primary, Font.Primary->FontSize, vTextPos, &m_ItemNameClip);
 
 				// Right-side Element
-				switch (m_Item->m_Type)
+				switch (pItem->m_Type)
 				{
+					default:
+						break;
 					case eImMMenuItemType_Section:
 					{
-						ImVec2 m_IconSize = Font.CalcTextSize(Icons.Font, Icons.RightArrow);
-						ImVec2 m_IconPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_IconSize.x, floorf((m_FrameHeight * 0.5f) - (m_IconSize.y * 0.5f))));
+						ImVec2 vIconSize = Font.CalcTextSize(Font.Icons, IMMENU_ICON_RIGHTARROW);
+						ImVec2 vIconPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - vIconSize.x, floorf((m_FrameHeight * 0.5f) - (vIconSize.y * 0.5f))));
 
-						Draw.Get()->AddText(Icons.Font, Icons.Font->FontSize, m_IconPos, Color.Primary_Text, Icons.RightArrow);
+						m_DrawList->AddText(Font.Icons, Font.Icons->FontSize, vIconPos, Color.Primary_Text, IMMENU_ICON_RIGHTARROW);
 					}
 					break;
 					case eImMMenuItemType_Checkbox:
 					{
 						float m_BoxSize = floorf(m_FrameHeight * 0.25f);
-						ImVec2 m_BoxPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_BoxSize, floorf(m_FrameHeight * 0.5f)));
+						ImVec2 m_BoxPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - m_BoxSize, floorf(m_FrameHeight * 0.5f)));
 
-						Draw.Get()->AddRect(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE, 0.f, 0, 2.f);
+						m_DrawList->AddRect(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE, 0.f, 0, 2.f);
 
-						if (reinterpret_cast<C_ImMMenuItemCheckbox*>(m_Item)->IsChecked())
+						if (reinterpret_cast<C_ImMMenuItemCheckbox*>(pItem)->IsChecked())
 						{
 							m_BoxSize -= 2.f;
-							Draw.Get()->AddRectFilled(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE);
+							m_DrawList->AddRectFilled(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE);
 						}
 					}
 					break;
 					case eImMMenuItemType_Combo:
 					case eImMMenuItemType_ComboCheckbox:
 					{
-						C_ImMMenuTextMultiColor m_PreviewText = reinterpret_cast<C_ImMMenuItemCombo*>(m_Item)->GetPreview();
+						C_ImMMenuTextMultiColor m_PreviewText = reinterpret_cast<C_ImMMenuItemCombo*>(pItem)->GetPreview();
 
-						ImVec2 m_PreviewSize = Font.CalcTextSize(Font.Primary, &m_PreviewText.GetFullString()[0]);
-						ImVec2 m_PreviewPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_PreviewSize.x, floorf((m_FrameHeight * 0.5f) - (m_PreviewSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+						ImVec2 vPreviewSize = m_PreviewText.CalcTextSize(Font.Primary);
+						ImVec2 vPreviewPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - vPreviewSize.x, floorf((m_FrameHeight * 0.5f) - (vPreviewSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
 						if (m_Selected)
 						{
 							float m_CheckboxOffset = 0.f;
-							if (m_Item->m_Type == eImMMenuItemType_ComboCheckbox)
+							if (pItem->m_Type == eImMMenuItemType_ComboCheckbox)
 							{
 								float m_BoxSize = floorf(m_FrameHeight * 0.25f);
 								m_CheckboxOffset = (m_BoxSize * 2.f) + 5.f;
 
-								ImVec2 m_BoxPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_BoxSize, floorf(m_FrameHeight * 0.5f)));
+								ImVec2 m_BoxPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - m_BoxSize, floorf(m_FrameHeight * 0.5f)));
 
-								Draw.Get()->AddRect(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE, 0.f, 0, 2.f);
+								m_DrawList->AddRect(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE, 0.f, 0, 2.f);
 
-								if (reinterpret_cast<C_ImMMenuItemComboCheckbox*>(m_Item)->IsChecked())
+								if (reinterpret_cast<C_ImMMenuItemComboCheckbox*>(pItem)->IsChecked())
 								{
 									m_BoxSize -= 2.f;
-									Draw.Get()->AddRectFilled(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE);
+									m_DrawList->AddRectFilled(m_BoxPos - ImVec2(m_BoxSize, m_BoxSize), m_BoxPos + ImVec2(m_BoxSize, m_BoxSize), IM_COL32_WHITE);
 								}
 							}
 
-							ImVec2 m_IconRightSize = Font.CalcTextSize(Icons.Font, Icons.RightArrow);
-							ImVec2 m_IconRightPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_IconRightSize.x - m_CheckboxOffset, floorf((m_FrameHeight * 0.5f) - (m_IconRightSize.y * 0.5f))));
-							Draw.Get()->AddText(Icons.Font, Icons.Font->FontSize, m_IconRightPos, Color.Primary_Text, Icons.RightArrow);
+							ImVec2 m_IconRightSize = Font.CalcTextSize(Font.Icons, IMMENU_ICON_RIGHTARROW);
+							ImVec2 m_IconRightPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - m_IconRightSize.x - m_CheckboxOffset, floorf((m_FrameHeight * 0.5f) - (m_IconRightSize.y * 0.5f))));
+							m_DrawList->AddText(Font.Icons, Font.Icons->FontSize, m_IconRightPos, Color.Primary_Text, IMMENU_ICON_RIGHTARROW);
 						
-							m_PreviewPos.x = m_IconRightPos.x - m_PreviewSize.x - 5.f;
+							vPreviewPos.x = m_IconRightPos.x - vPreviewSize.x - 5.f;
 
-							ImVec2 m_IconLeftSize = Font.CalcTextSize(Icons.Font, Icons.LeftArrow);
-							ImVec2 m_IconLeftPos(m_IconRightPos - ImVec2(m_PreviewSize.x + m_IconLeftSize.x + 10.f, 0.f));
-							Draw.Get()->AddText(Icons.Font, Icons.Font->FontSize, m_IconLeftPos, Color.Primary_Text, Icons.LeftArrow);
+							ImVec2 m_IconLeftSize = Font.CalcTextSize(Font.Icons, IMMENU_ICON_LEFTARROW);
+							ImVec2 m_IconLeftPos(m_IconRightPos - ImVec2(vPreviewSize.x + m_IconLeftSize.x + 10.f, 0.f));
+							m_DrawList->AddText(Font.Icons, Font.Icons->FontSize, m_IconLeftPos, Color.Primary_Text, IMMENU_ICON_LEFTARROW);
 						}
 
-						Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_PreviewPos, &m_PreviewText);
+						m_PreviewText.Draw(m_DrawList, Font.Primary, Font.Primary->FontSize, vPreviewPos);
 					}
 					break;
 					case eImMMenuItemType_Integer:
 					case eImMMenuItemType_Float:
 					{
-						bool m_IsFloat = (m_Item->m_Type == eImMMenuItemType_Float);
+						bool m_IsFloat = (pItem->m_Type == eImMMenuItemType_Float);
 
-						std::string m_PreviewText = (m_IsFloat ? reinterpret_cast<C_ImMMenuItemFloat*>(m_Item)->GetPreview() : reinterpret_cast<C_ImMMenuItemInteger*>(m_Item)->GetPreview());
+						std::string m_PreviewText = (m_IsFloat ? reinterpret_cast<C_ImMMenuItemFloat*>(pItem)->GetPreview() : reinterpret_cast<C_ImMMenuItemInteger*>(pItem)->GetPreview());
 
-						ImVec2 m_PreviewSize = Font.CalcTextSize(Font.Primary, &m_PreviewText[0]);
-						ImVec2 m_PreviewPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_PreviewSize.x, floorf((m_FrameHeight * 0.5f) - (m_PreviewSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+						ImVec2 vPreviewSize = Font.CalcTextSize(Font.Primary, &m_PreviewText[0]);
+						ImVec2 vPreviewPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - vPreviewSize.x, floorf((m_FrameHeight * 0.5f) - (vPreviewSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
 						if (m_Selected)
 						{
-							ImVec2 m_IconRightSize = Font.CalcTextSize(Icons.Font, Icons.RightArrow);
-							ImVec2 m_IconRightPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_IconRightSize.x, floorf((m_FrameHeight * 0.5f) - (m_IconRightSize.y * 0.5f))));
-							Draw.Get()->AddText(Icons.Font, Icons.Font->FontSize, m_IconRightPos, Color.Primary_Text, Icons.RightArrow);
+							ImVec2 m_IconRightSize = Font.CalcTextSize(Font.Icons, IMMENU_ICON_RIGHTARROW);
+							ImVec2 m_IconRightPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - m_IconRightSize.x, floorf((m_FrameHeight * 0.5f) - (m_IconRightSize.y * 0.5f))));
+							m_DrawList->AddText(Font.Icons, Font.Icons->FontSize, m_IconRightPos, Color.Primary_Text, IMMENU_ICON_RIGHTARROW);
 
-							m_PreviewPos.x = m_IconRightPos.x - m_PreviewSize.x - 5.f;
+							vPreviewPos.x = m_IconRightPos.x - vPreviewSize.x - 5.f;
 
-							ImVec2 m_IconLeftSize = Font.CalcTextSize(Icons.Font, Icons.LeftArrow);
-							ImVec2 m_IconLeftPos(m_IconRightPos - ImVec2(m_PreviewSize.x + m_IconLeftSize.x + 10.f, 0.f));
-							Draw.Get()->AddText(Icons.Font, Icons.Font->FontSize, m_IconLeftPos, Color.Primary_Text, Icons.LeftArrow);
+							ImVec2 m_IconLeftSize = Font.CalcTextSize(Font.Icons, IMMENU_ICON_LEFTARROW);
+							ImVec2 m_IconLeftPos(m_IconRightPos - ImVec2(vPreviewSize.x + m_IconLeftSize.x + 10.f, 0.f));
+							m_DrawList->AddText(Font.Icons, Font.Icons->FontSize, m_IconLeftPos, Color.Primary_Text, IMMENU_ICON_LEFTARROW);
 						}
 
-						Draw.Get()->AddText(Font.Primary, Font.Primary->FontSize, m_PreviewPos, Color.Primary_Text, &m_PreviewText[0]);
+						m_DrawList->AddText(Font.Primary, Font.Primary->FontSize, vPreviewPos, Color.Primary_Text, &m_PreviewText[0]);
 					}
 					break;
 					case eImMMenuItemType_Keybind:
 					{
-						ImGuiKey m_Key = reinterpret_cast<C_ImMMenuItemKeybind*>(m_Item)->GetKey();
+						ImGuiKey iKey = reinterpret_cast<C_ImMMenuItemKeybind*>(pItem)->GetKey();
 
-						std::string m_KeyText = "< ";
-						if (Item.GetInteracted() == m_Item)
-							m_KeyText += "Press Key";
-						else if (m_Key == ImGuiKey_None)
-							m_KeyText += "None";
-						else
-							m_KeyText += ImGui::GetKeyName(m_Key);
+						const char* szKeyName;
+						{
+							if (Item.GetInteracted() == pItem) {
+								szKeyName = "Press Key";
+							}
+							else if (iKey == ImGuiKey_None) {
+								szKeyName = "None";
+							}
+							else {
+								szKeyName = ImGui::GetKeyName(iKey);
+							}
+						}
 
-						m_KeyText += " >";
+						const char* szFormat;
+						ImFormatStringToTempBuffer(&szFormat, 0, "< %s >", szKeyName);
 
-						ImVec2 m_KeySize = Font.CalcTextSize(Font.Primary, &m_KeyText[0]);
-						ImVec2 m_KeyPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_KeySize.x, floorf((m_FrameHeight * 0.5f) - (m_KeySize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+						ImVec2 vKeySize = Font.CalcTextSize(Font.Primary, szFormat);
+						ImVec2 vKeyPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - vKeySize.x, floorf((m_FrameHeight * 0.5f) - (vKeySize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
-						Draw.Get()->AddText(Font.Primary, Font.Primary->FontSize, m_KeyPos, Color.Primary_Text, &m_KeyText[0]);
+						m_DrawList->AddText(Font.Primary, Font.Primary->FontSize, vKeyPos, Color.Primary_Text, szFormat);
 					}
 					break;
 					case eImMMenuItemType_InputText:
 					{
-						if (reinterpret_cast<C_ImMMenuItemInputText*>(m_Item)->m_HideBuffer)
+						if (reinterpret_cast<C_ImMMenuItemInputText*>(pItem)->m_HideBuffer) {
 							break;
+						}
 
-						std::string m_TextValue = reinterpret_cast<C_ImMMenuItemInputText*>(m_Item)->m_Buffer;
+						std::string m_TextValue = reinterpret_cast<C_ImMMenuItemInputText*>(pItem)->m_Buffer;
 						if (m_TextValue.empty())
 							break;
 
@@ -889,86 +859,85 @@ public:
 						}
 
 						ImVec2 m_TextValueSize = Font.CalcTextSize(Font.Primary, &m_TextValue[0]);
-						ImVec2 m_TextValuePos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_TextValueSize.x, floorf((m_FrameHeight * 0.5f) - (m_TextValueSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+						ImVec2 m_TextValuePos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - m_TextValueSize.x, floorf((m_FrameHeight * 0.5f) - (m_TextValueSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
 
-						Draw.Get()->AddText(Font.Primary, Font.Primary->FontSize, m_TextValuePos, Color.Primary_Text, &m_TextValue[0]);
+						m_DrawList->AddText(Font.Primary, Font.Primary->FontSize, m_TextValuePos, Color.Primary_Text, &m_TextValue[0]);
 					}
 					break;
 				}
 
-				Draw.m_Pos.y += m_FrameHeight;
+				m_DrawPos.y += m_FrameHeight;
 			}
 		}
 
 		// Footer
 		{
 			float m_FooterHeight = floorf(Font.Primary->FontSize * 2.f);
-			Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_FooterHeight), Color.Footer);
+			m_DrawList->AddRectFilled(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, m_FooterHeight), Color.Footer);
 
 			// Select Info
 			{
 				std::string m_Text = Item.GetSelectOfCountString();
-				ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &m_Text[0]);
-				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, floorf((m_FooterHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
-				Draw.Get()->AddText(Font.Primary, Font.Primary->FontSize, m_TextPos, Color.Title_Text, &m_Text[0]);
+				ImVec2 vTextSize = Font.CalcTextSize(Font.Primary, &m_Text[0]);
+				ImVec2 vTextPos(m_DrawPos + ImVec2(10.f, floorf((m_FooterHeight * 0.5f) - (vTextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+				m_DrawList->AddText(Font.Primary, Font.Primary->FontSize, vTextPos, Color.Title_Text, &m_Text[0]);
 			}
 
 			// Icon Center
 			{
-				ImVec2 m_IconSize = Font.CalcTextSize(Icons.Font, Icons.UpDownArrow);
-				ImVec2 m_IconPos(Draw.m_Pos + ImVec2(floorf((m_FrameWidth * 0.5f) - (m_IconSize.x * 0.5f)), floorf((m_FooterHeight * 0.5f) - (m_IconSize.y * 0.5f))));
+				ImVec2 vIconSize = Font.CalcTextSize(Font.Icons, IMMENU_ICON_UPDOWNARROW);
+				ImVec2 vIconPos(m_DrawPos + ImVec2(floorf((m_FrameWidth * 0.5f) - (vIconSize.x * 0.5f)), floorf((m_FooterHeight * 0.5f) - (vIconSize.y * 0.5f))));
 
-				Draw.Get()->AddText(Icons.Font, Icons.Font->FontSize, m_IconPos, Color.Primary_Text, Icons.UpDownArrow);
+				m_DrawList->AddText(Font.Icons, Font.Icons->FontSize, vIconPos, Color.Primary_Text, IMMENU_ICON_UPDOWNARROW);
 			}
 
-			if (Footer.Text.Count)
+			if (m_FooterText.GetCount())
 			{
-				ImVec2 m_TextSize = Font.CalcTextSize(Font.Primary, &Footer.Text.GetFullString()[0]);
-				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(m_FrameWidth - 10.f - m_TextSize.x, floorf((m_FooterHeight * 0.5f) - (m_TextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
-				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, m_TextPos, &Footer.Text);
+				ImVec2 vTextSize = m_FooterText.CalcTextSize(Font.Primary);
+				ImVec2 vTextPos(m_DrawPos + ImVec2(m_FrameWidth - 10.f - vTextSize.x, floorf((m_FooterHeight * 0.5f) - (vTextSize.y * IMMENU_TEXT_CENTER_VERTICAL))));
+				m_FooterText.Draw(m_DrawList, Font.Primary, Font.Primary->FontSize, vTextPos);
 			}
 
-			Draw.m_Pos.y += m_FooterHeight;
+			m_DrawPos.y += m_FooterHeight;
 		}
 
 		if (Item.IsSelectedValid())
 		{
 			// Item Description
-			C_ImMMenuItem* m_Item = Item.GetSelectableItem(Item.m_Selected);
-			if (m_Item && !m_Item->m_Description.empty())
+			auto pItem = Item.GetSelectableItem(Item.m_Selected);
+			if (pItem && !pItem->m_Description.empty())
 			{
-				C_ImMMenuTextMultiColor m_ItemDescription = m_Item->GetDescription();
+				C_ImMMenuTextMultiColor m_ItemDescription = pItem->GetDescription();
 
-				Draw.m_Pos.y += 5.f;
+				m_DrawPos.y += 5.f;
 
-				ImVec2 m_TextSize			= Font.CalcTextSize(Font.Primary, &m_ItemDescription.GetFullString()[0]);
-				float m_DescriptionHeight	= floorf(m_TextSize.y * 0.85f) + 10.f;
+				ImVec2 vTextSize			= m_ItemDescription.CalcTextSize(Font.Primary);
+				float fDescriptionHeight	= floorf(vTextSize.y * 0.85f) + 10.f;
 
-				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, m_DescriptionHeight), Color.Description);
-				Draw.Get()->AddLine(Draw.m_Pos, Draw.m_Pos + ImVec2(m_FrameWidth, 0.f), Color.Primary, 3.f);
+				m_DrawList->AddRectFilled(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, fDescriptionHeight), Color.Description);
+				m_DrawList->AddLine(m_DrawPos, m_DrawPos + ImVec2(m_FrameWidth, 0.f), Color.Primary, 3.f);
 
-				ImVec2 m_TextPos(Draw.m_Pos + ImVec2(10.f, 8.f));
-				Draw.AddMultiColorText(Font.Primary, floorf(Font.Primary->FontSize * 0.85f), m_TextPos, &m_ItemDescription);
+				ImVec2 vTextPos(m_DrawPos + ImVec2(10.f, 8.f));
+				m_ItemDescription.Draw(m_DrawList, Font.Primary, floorf(Font.Primary->FontSize * 0.85f), vTextPos);
 
-				Draw.m_Pos.y += m_DescriptionHeight;
+				m_DrawPos.y += fDescriptionHeight;
 			}
 
 			// InputText Popup
 			if (Input.IsInteractingWithInputText)
 			{
-				C_ImMMenuItemInputText* m_InputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
+				C_ImMMenuItemInputText* pInputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
 
-				Draw.m_Pos.y += 5.f;
+				m_DrawPos.y += 5.f;
 				ImVec2 m_PopupSize(m_FrameWidth, floorf(Font.Primary->FontSize * 3.f) + 30.f);
 
-				Draw.Get()->AddRectFilled(Draw.m_Pos, Draw.m_Pos + m_PopupSize, Color.Item);
+				m_DrawList->AddRectFilled(m_DrawPos, m_DrawPos + m_PopupSize, Color.Item);
 
-				C_ImMMenuTextMultiColor m_PopupText = m_InputText->GetPopupText();
-				Draw.AddMultiColorText(Font.Primary, Font.Primary->FontSize, Draw.m_Pos + ImVec2(10.f, 10.f), &m_PopupText);
+				pInputText->GetPopupText().Draw(m_DrawList, Font.Primary, Font.Primary->FontSize, m_DrawPos + ImVec2(10.f, 10.f));
 
-				ImRect m_InputFieldBB(Draw.m_Pos + ImVec2(10.f, Font.Primary->FontSize + 15.f), Draw.m_Pos + m_PopupSize - ImVec2(10.f, 10.f));
-				Draw.Get()->AddRectFilled(m_InputFieldBB.Min, m_InputFieldBB.Max, IM_COL32(0, 0, 0, 255));
-				Draw.Get()->AddRect(m_InputFieldBB.Min, m_InputFieldBB.Max, IM_COL32(50, 50, 50, 255), 0.f, 0, 2.f);
+				ImRect m_InputFieldBB(m_DrawPos + ImVec2(10.f, Font.Primary->FontSize + 15.f), m_DrawPos + m_PopupSize - ImVec2(10.f, 10.f));
+				m_DrawList->AddRectFilled(m_InputFieldBB.Min, m_InputFieldBB.Max, IM_COL32(0, 0, 0, 255));
+				m_DrawList->AddRect(m_InputFieldBB.Min, m_InputFieldBB.Max, IM_COL32(50, 50, 50, 255), 0.f, 0, 2.f);
 
 				ImGui::SetNextWindowPos(m_InputFieldBB.Min + ImVec2(5.f, 6.f));
 				ImGui::SetNextWindowSize(m_InputFieldBB.Max - m_InputFieldBB.Min);
@@ -982,7 +951,7 @@ public:
 					ImGui::SetCursorPos(ImVec2(0.f, 0.f));
 					ImGui::SetKeyboardFocusHere();
 					ImGui::SetNextItemWidth(m_InputFieldBB.Max.x - m_InputFieldBB.Min.x - 10.f);
-					ImGui::InputText("###InputText", &Item.m_TextInputBuffer[0], m_InputText->m_BufferSize, m_InputText->m_Flags);
+					ImGui::InputText("###InputText", &Item.m_TextInputBuffer[0], pInputText->m_BufferSize, pInputText->m_Flags);
 					ImGui::End();
 				}
 				ImGui::PopStyleVar(1);
@@ -994,11 +963,11 @@ public:
 		// Input
 		if (Input.IsInteractingWithKeybind)
 		{
-			ImGuiKey m_PressedKey = Input.GetAnyPressed();
-			if (m_PressedKey != ImGuiKey_None)
+			ImGuiKey iPressedKey = Input.GetAnyPressed();
+			if (iPressedKey != ImGuiKey_None)
 			{
-				C_ImMMenuItemKeybind* m_InteractedItem = reinterpret_cast<C_ImMMenuItemKeybind*>(Item.GetInteracted());
-				*m_InteractedItem->m_Value = (m_PressedKey == ImGuiKey_Escape ? ImGuiKey_None : m_PressedKey);
+				C_ImMMenuItemKeybind* pInteractedItem = reinterpret_cast<C_ImMMenuItemKeybind*>(Item.GetInteracted());
+				*pInteractedItem->m_Value = (iPressedKey == ImGuiKey_Escape ? ImGuiKey_None : iPressedKey);
 
 				Input.IsInteractingWithKeybind = false;
 			}
@@ -1007,13 +976,14 @@ public:
 		{
 			if (ImGui::IsKeyPressed(Input.m_InteractionKey, false))
 			{
-				C_ImMMenuItemInputText* m_InputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
-				memcpy(m_InputText->m_Buffer, &Item.m_TextInputBuffer[0], m_InputText->m_BufferSize);
+				C_ImMMenuItemInputText* pInputText = reinterpret_cast<C_ImMMenuItemInputText*>(Item.GetSelectableItem(Item.m_Selected));
+				memcpy(pInputText->m_Buffer, &Item.m_TextInputBuffer[0], pInputText->m_BufferSize);
 				Item.m_TextInputBuffer.clear();
 				Input.IsInteractingWithInputText = false;
 			}
-			else if (ImGui::IsKeyPressed(ImGuiKey_Escape, false))
+			else if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
 				Input.IsInteractingWithInputText = false;
+			}
 		}
 		else if (!Input.BlockedByItem())
 		{
@@ -1035,14 +1005,16 @@ public:
 			if (Input.m_SelectUpDown != 0)
 			{
 				Item.Update(static_cast<int>(Input.m_SelectUpDown));
-				ItemNameScroll.Reset(m_BeginTime, (IMMENU_ITEM_NAME_SCROLL_WAIT_TIME * 0.5));
+				ItemNameScroll.Reset(m_CurrentTime, (IMMENU_ITEM_NAME_SCROLL_WAIT_TIME * 0.5));
 				Input.m_SelectUpDown = 0;
 			}
 
 			if (Input.m_SelectLeftRight != 0)
 			{
-				if (Item.IsSelectedValid())
+				if (Item.IsSelectedValid()) {
 					Item.UpdateSideInteraction(static_cast<int>(Input.m_SelectLeftRight));
+				}
+
 				Input.m_SelectLeftRight = 0;
 			}
 
@@ -1053,24 +1025,27 @@ public:
 					Item.m_Interacted = Item.m_Selected;
 					Item.UpdateInteraction();
 
-					C_ImMMenuItem* m_InteractedItem = Item.GetInteracted();
-					if (m_InteractedItem)
+					C_ImMMenuItem* pInteractedItem = Item.GetInteracted();
+					if (pInteractedItem)
 					{
-						if (m_InteractedItem->m_Type == eImMMenuItemType_Keybind)
+						if (pInteractedItem->m_Type == eImMMenuItemType_Keybind) {
 							Input.IsInteractingWithKeybind = true;
-						else if (m_InteractedItem->m_Type == eImMMenuItemType_InputText)
+						}
+						else if (pInteractedItem->m_Type == eImMMenuItemType_InputText)
 						{
 							Item.m_Interacted = -1;
-							Item.m_TextInputBuffer = reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->m_Buffer;
-							Item.m_TextInputBuffer.resize(reinterpret_cast<C_ImMMenuItemInputText*>(m_InteractedItem)->m_BufferSize);
+							Item.m_TextInputBuffer = reinterpret_cast<C_ImMMenuItemInputText*>(pInteractedItem)->m_Buffer;
+							Item.m_TextInputBuffer.resize(reinterpret_cast<C_ImMMenuItemInputText*>(pInteractedItem)->m_BufferSize);
 							Input.IsInteractingWithInputText = true;
 						}
 					}
 				}
+
 				Input.m_SelectInteraction = false;
 			}
-			else
+			else {
 				Item.m_Interacted = -1;
+			}
 		}
 
 		Item.CleanUp();
