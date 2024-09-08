@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#define IMMENU_INLINE	__forceinline
+
 #define IMMENU_TEXT_CENTER_VERTICAL 0.375f // You might need to change this later, but the font that is used by default has weird padding on top...
 
 #define IMMENU_ITEM_NAME_SCROLL_SPEED 100.0f
@@ -182,104 +184,134 @@ public:
 			return true;
 		}
 
-		void AddSeparator(std::string m_Name)
+		void AddSeparator(const char* p_Name)
 		{
-			if (IsDummy(eImMMenuItemType_Separator))
+			if (IsDummy(eImMMenuItemType_Separator)) {
 				return;
+			}
 
-			C_ImMMenuItemSeparator* m_Item = new C_ImMMenuItemSeparator(m_Name);
-			AddNewItem(m_Item);
+			auto pItem = new C_ImMMenuItemSeparator(p_Name);
+			AddNewItem(pItem);
 		}
 
-		bool AddText(std::string m_Name)
+		bool AddText(const char* p_Name)
 		{
-			if (IsDummy(eImMMenuItemType_Text))
+			if (IsDummy(eImMMenuItemType_Text)) {
 				return false;
+			}
 
-			C_ImMMenuItem* m_Item = new C_ImMMenuItem(eImMMenuItemType_Text, m_Name);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItem(eImMMenuItemType_Text, p_Name);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
-		void AddTextUnselectable(std::string m_Name)
+		void AddTextUnselectable(const char* p_Name)
 		{
-			if (IsDummy(eImMMenuItemType_TextUnselectable))
+			if (IsDummy(eImMMenuItemType_TextUnselectable)) {
 				return;
+			}
 
-			C_ImMMenuItem* m_Item = new C_ImMMenuItem(eImMMenuItemType_TextUnselectable, m_Name);
-			AddNewItem(m_Item);
+			auto pItem = new C_ImMMenuItem(eImMMenuItemType_TextUnselectable, p_Name);
+			AddNewItem(pItem);
 		}
 
-		bool AddSection(std::string m_Name)
+		bool AddSection(const char* p_Name)
 		{
-			if (IsDummy(eImMMenuItemType_Section))
+			if (IsDummy(eImMMenuItemType_Section)) {
 				return false;
+			}
 
-			C_ImMMenuItem* m_Item = new C_ImMMenuItem(eImMMenuItemType_Section, m_Name);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItem(eImMMenuItemType_Section, p_Name);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
-		bool AddCheckbox(std::string m_Name, bool* m_Value)
+		bool AddCheckbox(const char* p_Name, bool* p_Value)
 		{
-			if (IsDummy(eImMMenuItemType_Checkbox))
+			if (IsDummy(eImMMenuItemType_Checkbox)) {
 				return false;
+			}
 
-			C_ImMMenuItemCheckbox* m_Item = new C_ImMMenuItemCheckbox(m_Name, m_Value);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItemCheckbox(p_Name, p_Value);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
-		bool AddCombo(std::string m_Name, int* m_Value, std::vector<std::string>& m_Items, bool m_Clamp = false)
+		bool AddCombo(const char* p_Name, int* p_Value, const char** p_Items, int p_NumItems, bool p_Clamp = false)
 		{
-			if (IsDummy(eImMMenuItemType_Combo))
+			if (IsDummy(eImMMenuItemType_Combo)) {
 				return false;
+			}
 
-			C_ImMMenuItemCombo* m_Item = new C_ImMMenuItemCombo(m_Name, m_Value, m_Items, m_Clamp);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItemCombo(p_Name, p_Value, p_Items, p_NumItems, p_Clamp);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
-		bool AddComboCheckbox(std::string m_Name, int* m_Value, std::vector<bool>* m_Values, std::vector<std::string>& m_Items, bool m_Clamp = false)
+		bool AddCombo(const char* p_Name, int* p_Value, std::vector<std::string>& p_Items, bool p_Clamp = false)
 		{
-			if (IsDummy(eImMMenuItemType_ComboCheckbox))
+			if (IsDummy(eImMMenuItemType_Combo)) {
 				return false;
+			}
 
-			C_ImMMenuItemComboCheckbox* m_Item = new C_ImMMenuItemComboCheckbox(m_Name, m_Value, m_Values, m_Items, m_Clamp);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItemCombo(p_Name, p_Value, p_Items, p_Clamp);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
-		bool AddInteger(std::string m_Name, int* m_Value, int m_Min, int m_Max, int m_Power = 1, bool m_Clamp = false)
+		bool AddComboCheckbox(const char* p_Name, int* p_Value, std::vector<bool>* p_Values, const char** p_Items, int p_NumItems, bool p_Clamp = false)
+		{
+			if (IsDummy(eImMMenuItemType_ComboCheckbox)) {
+				return false;
+			}
+
+			auto pItem = new C_ImMMenuItemComboCheckbox(p_Name, p_Value, p_Values, p_Items, p_NumItems, p_Clamp);
+			return (m_Interacted == AddNewItem(pItem));
+		}
+
+		bool AddComboCheckbox(const char* p_Name, int* p_Value, std::vector<bool>* p_Values, std::vector<std::string>& p_Items, bool p_Clamp = false)
+		{
+			if (IsDummy(eImMMenuItemType_ComboCheckbox)) {
+				return false;
+			}
+
+			auto pItem = new C_ImMMenuItemComboCheckbox(p_Name, p_Value, p_Values, p_Items, p_Clamp);
+			return (m_Interacted == AddNewItem(pItem));
+		}
+
+		bool AddInteger(const char* m_Name, int* p_Value, int m_Min, int m_Max, int m_Power = 1, bool m_Clamp = false)
 		{
 			if (IsDummy(eImMMenuItemType_Integer))
 				return false;
 
-			C_ImMMenuItemInteger* m_Item = new C_ImMMenuItemInteger(m_Name, m_Value, m_Min, m_Max, m_Power, m_Clamp);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItemInteger(m_Name, p_Value, m_Min, m_Max, m_Power, m_Clamp);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
-		bool AddFloat(std::string m_Name, float* m_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f", bool m_Clamp = false)
+		bool AddFloat(const char* m_Name, float* p_Value, float m_Min, float m_Max, float m_Power = 0.1f, const char* m_PreviewFormat = "%.3f", bool m_Clamp = false)
 		{
-			if (IsDummy(eImMMenuItemType_Float))
+			if (IsDummy(eImMMenuItemType_Float)) {
 				return false;
+			}
 
-			C_ImMMenuItemFloat* m_Item = new C_ImMMenuItemFloat(m_Name, m_Value, m_Min, m_Max, m_Power, m_Clamp, m_PreviewFormat);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItemFloat(m_Name, p_Value, m_Min, m_Max, m_Power, m_Clamp, m_PreviewFormat);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
-		bool AddKeybind(std::string m_Name, ImGuiKey* m_Value)
+		bool AddKeybind(const char* m_Name, ImGuiKey* p_Value)
 		{
-			if (IsDummy(eImMMenuItemType_Keybind))
+			if (IsDummy(eImMMenuItemType_Keybind)) {
 				return false;
+			}
 
-			C_ImMMenuItemKeybind* m_Item = new C_ImMMenuItemKeybind(m_Name, m_Value);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItemKeybind(m_Name, p_Value);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
 		std::string m_TextInputBuffer;
-		bool AddTextInput(std::string m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags = 0, bool m_HideBuffer = false)
+		bool AddTextInput(const char* m_Name, std::string m_PopupText, char* m_Buffer, size_t m_BufferSize, ImGuiInputTextFlags m_Flags = 0, bool m_HideBuffer = false)
 		{
-			if (IsDummy(eImMMenuItemType_InputText))
+			if (IsDummy(eImMMenuItemType_InputText)) {
 				return false;
+			}
 
-			C_ImMMenuItemInputText* m_Item = new C_ImMMenuItemInputText(m_Name, m_PopupText, m_Buffer, m_BufferSize, m_Flags, m_HideBuffer);
-			return (m_Interacted == AddNewItem(m_Item));
+			auto pItem = new C_ImMMenuItemInputText(m_Name, m_PopupText, m_Buffer, m_BufferSize, m_Flags, m_HideBuffer);
+			return (m_Interacted == AddNewItem(pItem));
 		}
 
 		void SetDescription(std::string m_Description)
